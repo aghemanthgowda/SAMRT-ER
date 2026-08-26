@@ -1,0 +1,35 @@
+{
+  "name": "smart-er",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SMART-ER — emergency traffic corridor management platform",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.10"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:server dev:web",
+    "dev:server": "npm run dev --workspace @smart-er/server",
+    "dev:web": "npm run dev --workspace @smart-er/web",
+    "build": "npm run build --workspace @smart-er/core && npm run build --workspace @smart-er/server && npm run build --workspace @smart-er/web",
+    "start": "npm run start --workspace @smart-er/server",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.9.1",
+    "globals": "^17.11.0",
+    "npm-run-all2": "^9.0.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.68.0"
+  }
+}
