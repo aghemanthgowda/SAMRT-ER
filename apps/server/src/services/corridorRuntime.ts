@@ -52,6 +52,18 @@ export class CorridorRuntime {
    */
   private readonly pending = new Map<string, PendingTransition>();
 
+  /**
+   * Last state actually logged per corridor/junction.
+   *
+   * A transition the validator defers is retried each tick, and without this
+   * the timeline fills with the same "J3 preparing" line and the same
+   * minimum-green rejection over and over. The record needs to say what
+   * happened, once — a controller reading back through an incident should not
+   * have to scroll past thirty identical lines to find the next real event.
+   */
+  private readonly lastLogged = new Map<string, JunctionState>();
+
+
   constructor(
     private readonly store: Store,
     private readonly bus: EventBus,
@@ -180,6 +192,9 @@ export class CorridorRuntime {
     for (const key of [...this.pending.keys()]) {
       if (key.startsWith(`${corridor.id}:`)) this.pending.delete(key);
     }
+    for (const key of [...this.lastLogged.keys()]) {
+      if (key.includes(corridor.id)) this.lastLogged.delete(key);
+    }
     const result = releaseCorridor(corridor, this.store.now());
     for (const change of result.changed) {
       await this.applyJunctionState(result.corridor, change.junctionId, JunctionState.RELEASED, change.from);
@@ -275,7 +290,11 @@ export class CorridorRuntime {
     this.bus.emit('signal.command', validated);
 
     if (!verdict.approved) {
-      this.timeline.record({
+      const rejectionKey = `reject:${corridor.id}:${junctionId}:${state}`;
+      const firstRejection = this.lastLogged.get(rejectionKey) !== state;
+      this.lastLogged.set(rejectionKey, state);
+
+      if (firstRejection) this.timeline.record({
         kind: 'safety.rejected',
         message: `Signal command for ${junction.code} rejected by the safety validator: ${verdict.notes.join(' ')}`,
         junctionId,
@@ -360,6 +379,10 @@ export class CorridorRuntime {
     };
     const message = messages[state];
     if (!message) return;
+
+    const key = `${corridor.id}:${junctionId}`;
+    if (this.lastLogged.get(key) === state) return;
+    this.lastLogged.set(key, state);
 
     this.timeline.record({
       kind: `junction.${state.toLowerCase()}`,

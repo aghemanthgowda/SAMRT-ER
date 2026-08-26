@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -29,6 +30,17 @@ export default tseslint.config(
       eqeqeq: ['error', 'smart'],
       'prefer-const': 'error',
       'no-var': 'error',
+    },
+  },
+  {
+    // The rules-of-hooks and exhaustive-deps checks catch a real class of bug in
+    // this codebase: a store selector that builds a new array on every call
+    // re-renders on every telemetry tick and can loop.
+    files: ['apps/web/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
     },
   },
   {

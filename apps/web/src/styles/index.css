@@ -1,0 +1,227 @@
+@import 'tailwindcss';
+
+/*
+ * SMART-ER design tokens.
+ *
+ * This is emergency operations software. It gets looked at for eight hours at
+ * a stretch, often in a dim room, and the thing that matters is that a
+ * controller can find the one red row among forty in under a second.
+ *
+ * So: a dark, low-chroma neutral ground; colour reserved almost entirely for
+ * operational status; dense spacing; tabular figures everywhere a number can
+ * change. No gradients, no glass, no glow, no decorative motion. Every colour
+ * in the status ramp means exactly one thing and is never used for anything
+ * else — the moment amber also means "highlighted", amber stops meaning
+ * "preparing", and the display stops being readable at a glance.
+ */
+
+@theme {
+  /* Ground — cool neutral, deliberately desaturated so status colour carries. */
+  --color-ground-950: #0b1017;
+  --color-ground-900: #0f1720;
+  --color-ground-850: #141d28;
+  --color-ground-800: #1a242f;
+  --color-ground-750: #202b38;
+  --color-ground-700: #283542;
+  --color-ground-600: #37475a;
+  --color-ground-500: #4d6076;
+  --color-ground-400: #6b8098;
+  --color-ground-300: #93a6bb;
+  --color-ground-200: #bccada;
+  --color-ground-100: #dde5ee;
+  --color-ground-50: #f2f6fa;
+
+  /* Status ramp. One meaning each. */
+  --color-status-critical: #e5484d;
+  --color-status-critical-dim: #3d1418;
+  --color-status-high: #f5a524;
+  --color-status-high-dim: #3a2708;
+  --color-status-medium: #3d8bfd;
+  --color-status-medium-dim: #0e2547;
+  --color-status-low: #7c8da3;
+  --color-status-ok: #30a46c;
+  --color-status-ok-dim: #0c2a1c;
+
+  /* Junction states — these map to the map legend and must stay distinct. */
+  --color-junction-green: #30a46c;
+  --color-junction-preparing: #f5a524;
+  --color-junction-conflict: #e5484d;
+  --color-junction-released: #6b8098;
+  --color-junction-normal: #4d6076;
+  --color-junction-offline: #8b5cf6;
+
+  /* Accent — used only for interactive affordances, never for status. */
+  --color-accent-500: #2f6feb;
+  --color-accent-400: #4c8bff;
+  --color-accent-600: #1f5bd0;
+
+  --font-sans: 'Inter var', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Roboto Mono', ui-monospace, monospace;
+
+  --radius-panel: 4px;
+  --radius-control: 3px;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: var(--color-ground-700);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-ground-950);
+    color: var(--color-ground-100);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Notch and home-indicator safety on the driver handset. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
+
+  /*
+   * Any figure that updates in place uses tabular figures. Without this an ETA
+   * counting down from 05:49 to 05:48 makes the whole row twitch, and a
+   * twitching row is one a tired operator stops trusting.
+   */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-ground-700);
+    border-radius: 5px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ground-600);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent-400);
+    outline-offset: 1px;
+  }
+
+  /* Respect the operator's motion preference — nothing here is load-bearing. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* A panel is the basic unit of the console: a titled, bordered region. */
+  .panel {
+    background-color: var(--color-ground-900);
+    border: 1px solid var(--color-ground-700);
+    border-radius: var(--radius-panel);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--color-ground-700);
+    background-color: var(--color-ground-850);
+    flex-shrink: 0;
+  }
+
+  .panel-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-ground-300);
+  }
+
+  .panel-body {
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1;
+  }
+
+  /* Status pill. Colour comes from a data attribute so it cannot drift. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border-radius: var(--radius-control);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+
+  .row-button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border-bottom: 1px solid var(--color-ground-800);
+    transition: background-color 100ms ease;
+  }
+  .row-button:hover {
+    background-color: var(--color-ground-850);
+  }
+  .row-button[data-selected='true'] {
+    background-color: var(--color-ground-800);
+    box-shadow: inset 2px 0 0 var(--color-accent-500);
+  }
+
+  /*
+   * The one animation in the system. A critical unit awaiting a decision is
+   * the single case where drawing the eye is worth the cost of motion.
+   */
+  @keyframes urgent-pulse {
+    0%,
+    100% {
+      border-color: var(--color-status-critical);
+    }
+    50% {
+      border-color: color-mix(in srgb, var(--color-status-critical) 35%, transparent);
+    }
+  }
+  .urgent {
+    animation: urgent-pulse 1.8s ease-in-out infinite;
+  }
+}

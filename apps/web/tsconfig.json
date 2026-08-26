@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client", "google.maps", "vitest/globals", "@testing-library/jest-dom"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "baseUrl": "."
+  },
+  "include": ["src/**/*", "vite.config.ts", "vitest.config.ts"]
+}
