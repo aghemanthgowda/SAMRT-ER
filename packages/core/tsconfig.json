@@ -4,6 +4,11 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "composite": true,
+    // Keep the incremental build state inside the output directory. With the
+    // default location, deleting dist/ leaves the .tsbuildinfo behind and tsc
+    // concludes it is already up to date — emitting nothing, and leaving the
+    // apps unable to resolve @smart-er/core.
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "types": ["node"]
   },
   "include": ["src/**/*"],
