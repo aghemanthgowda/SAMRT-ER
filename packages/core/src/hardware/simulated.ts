@@ -7,7 +7,8 @@ import type {
 } from '../types/domain.js';
 import { DeviceKind, DeviceStatus, HardwareMode, SignalAspect } from '../types/enums.js';
 import { SeededRandom } from '../util/random.js';
-import { isoNow } from '../util/time.js';
+import type { Clock } from '../util/clock.js';
+import { SystemClock } from '../util/clock.js';
 import type {
   EmergencyButton,
   GpsFix,
@@ -40,6 +41,8 @@ import type {
 
 export interface SimulatedHardwareOptions {
   seed?: number;
+  /** Timebase for signal-change timestamps. Defaults to wall-clock time. */
+  clock?: Clock;
   /** Mean acknowledgement latency in ms. */
   ackLatencyMs?: number;
   /** Probability a command is rejected and must be retried. */
@@ -96,10 +99,11 @@ export class SimulatedJunctionController implements JunctionController {
     private readonly junction: Junction,
     private readonly random: SeededRandom,
     private readonly options: Required<Pick<SimulatedHardwareOptions, 'ackLatencyMs' | 'ackFailureRate'>>,
+    private readonly clock: Clock = new SystemClock(),
   ) {
     for (const approach of junction.approaches) {
       this.aspectByApproach.set(approach.id, SignalAspect.RED);
-      this.changedAt.set(approach.id, isoNow());
+      this.changedAt.set(approach.id, this.clock.iso());
     }
   }
 
@@ -122,7 +126,7 @@ export class SimulatedJunctionController implements JunctionController {
         accepted: false,
         appliedAspect: SignalAspect.FLASHING_RED,
         latencyMs,
-        receivedAt: isoNow(),
+        receivedAt: this.clock.iso(),
         error: 'controller offline',
       };
     }
@@ -137,7 +141,7 @@ export class SimulatedJunctionController implements JunctionController {
         accepted: false,
         appliedAspect: this.aspectByApproach.get(command.approachId) ?? SignalAspect.RED,
         latencyMs,
-        receivedAt: isoNow(),
+        receivedAt: this.clock.iso(),
         error: 'transient link error; command not applied',
       };
     }
@@ -159,7 +163,7 @@ export class SimulatedJunctionController implements JunctionController {
       accepted: true,
       appliedAspect: command.aspect,
       latencyMs,
-      receivedAt: isoNow(),
+      receivedAt: this.clock.iso(),
     };
   }
 
@@ -196,7 +200,7 @@ export class SimulatedJunctionController implements JunctionController {
   private setAspect(approachId: string, aspect: SignalAspect): void {
     if (this.aspectByApproach.get(approachId) === aspect) return;
     this.aspectByApproach.set(approachId, aspect);
-    this.changedAt.set(approachId, isoNow());
+    this.changedAt.set(approachId, this.clock.iso());
   }
 }
 
@@ -208,7 +212,10 @@ export class SimulatedSignalController implements SignalController {
   readonly name = 'simulated-signals';
   private readonly controllers = new Map<string, SimulatedJunctionController>();
 
-  constructor(controllers: readonly SimulatedJunctionController[]) {
+  constructor(
+    controllers: readonly SimulatedJunctionController[],
+    private readonly clock: Clock = new SystemClock(),
+  ) {
     for (const controller of controllers) {
       this.controllers.set(controller.junctionId, controller);
     }
@@ -235,7 +242,7 @@ export class SimulatedSignalController implements SignalController {
         accepted: false,
         appliedAspect: SignalAspect.FLASHING_RED,
         latencyMs: 0,
-        receivedAt: isoNow(),
+        receivedAt: this.clock.iso(),
         error: `no controller registered for junction ${command.junctionId}`,
       };
     }
@@ -259,7 +266,10 @@ export class SimulatedGpsProvider implements GpsProvider {
   private readonly telemetryListeners = new Set<(telemetry: VehicleTelemetry) => void>();
   private readonly failed = new Set<string>();
 
-  constructor(private readonly random: SeededRandom = new SeededRandom()) {}
+  constructor(
+    private readonly random: SeededRandom = new SeededRandom(),
+    private readonly clock: Clock = new SystemClock(),
+  ) {}
 
   read(vehicleId: string): GpsFix | undefined {
     return this.fixes.get(vehicleId);
@@ -323,7 +333,7 @@ export class SimulatedGpsProvider implements GpsProvider {
       heading: truth.heading,
       speedKph: hasFailed ? 0 : truth.speedKph,
       accuracy: hasFailed ? 999 : Math.round(jitterM * 2),
-      at: isoNow(),
+      at: this.clock.iso(),
       valid: !hasFailed,
     };
 
@@ -362,7 +372,10 @@ export class SimulatedEmergencyButton implements EmergencyButton {
   readonly name = 'simulated-button';
   private readonly listeners = new Set<(payload: { vehicleId: string; deviceId: string; at: Timestamp }) => void>();
 
-  constructor(private readonly deviceIdByVehicle: ReadonlyMap<string, string> = new Map()) {}
+  constructor(
+    private readonly deviceIdByVehicle: ReadonlyMap<string, string> = new Map(),
+    private readonly clock: Clock = new SystemClock(),
+  ) {}
 
   onPress(listener: (payload: { vehicleId: string; deviceId: string; at: Timestamp }) => void): () => void {
     this.listeners.add(listener);
@@ -373,7 +386,7 @@ export class SimulatedEmergencyButton implements EmergencyButton {
     const payload = {
       vehicleId,
       deviceId: this.deviceIdByVehicle.get(vehicleId) ?? `HW-${vehicleId}`,
-      at: isoNow(),
+      at: this.clock.iso(),
     };
     for (const listener of this.listeners) listener(payload);
   }
@@ -391,6 +404,7 @@ export class SimulatedHardwareStatusProvider implements HardwareStatusProvider {
   constructor(
     devices: readonly HardwareDevice[],
     private readonly watchdog: SimpleWatchdog,
+    private readonly clock: Clock = new SystemClock(),
   ) {
     for (const device of devices) this.byId.set(device.id, { ...device });
   }
@@ -403,7 +417,7 @@ export class SimulatedHardwareStatusProvider implements HardwareStatusProvider {
     return this.byId.get(deviceId);
   }
 
-  staleDevices(now: number = Date.now()): HardwareDevice[] {
+  staleDevices(now: number = this.clock.now()): HardwareDevice[] {
     const expired = new Set(this.watchdog.expired(now));
     return this.devices().filter((device) => expired.has(device.id));
   }
@@ -417,12 +431,12 @@ export class SimulatedHardwareStatusProvider implements HardwareStatusProvider {
   heartbeat(deviceId: string, patch: Partial<HardwareDevice> = {}): void {
     const device = this.byId.get(deviceId);
     if (!device) return;
-    this.watchdog.beat(deviceId);
+    this.watchdog.beat(deviceId, this.clock.now());
     this.byId.set(deviceId, {
       ...device,
       ...patch,
       status: patch.status ?? DeviceStatus.ONLINE,
-      lastHeartbeatAt: isoNow(),
+      lastHeartbeatAt: this.clock.iso(),
     });
     this.emit();
   }
@@ -436,7 +450,7 @@ export class SimulatedHardwareStatusProvider implements HardwareStatusProvider {
   }
 
   /** Re-evaluate every device against the watchdog. Called each tick. */
-  sweep(now: number = Date.now()): void {
+  sweep(now: number = this.clock.now()): void {
     const expired = new Set(this.watchdog.expired(now));
     let changed = false;
     for (const [id, device] of this.byId) {
@@ -479,14 +493,22 @@ export function createSimulatedHardware(
   options: SimulatedHardwareOptions = {},
 ): SimulatedHardwareBundle {
   const random = new SeededRandom(options.seed ?? 0x5a4e7c31);
+  const clock = options.clock ?? new SystemClock();
   const watchdog = new SimpleWatchdog(options.watchdogTimeoutMs ?? 6000);
 
   const controllers = junctions.map(
     (junction) =>
-      new SimulatedJunctionController(junction.id, junction.hardwareDeviceId, junction, random, {
-        ackLatencyMs: options.ackLatencyMs ?? 45,
-        ackFailureRate: options.ackFailureRate ?? 0.015,
-      }),
+      new SimulatedJunctionController(
+        junction.id,
+        junction.hardwareDeviceId,
+        junction,
+        random,
+        {
+          ackLatencyMs: options.ackLatencyMs ?? 45,
+          ackFailureRate: options.ackFailureRate ?? 0.015,
+        },
+        clock,
+      ),
   );
 
   const devices: HardwareDevice[] = [
@@ -498,7 +520,7 @@ export function createSimulatedHardware(
       status: DeviceStatus.ONLINE,
       firmwareVersion: 'sim-1.0.0',
       boundEntityId: junction.id,
-      lastHeartbeatAt: isoNow(),
+      lastHeartbeatAt: clock.iso(),
       signalStrength: 100,
     })),
     ...[...vehicleDeviceIds.entries()].map<HardwareDevice>(([vehicleId, deviceId]) => ({
@@ -509,17 +531,17 @@ export function createSimulatedHardware(
       status: DeviceStatus.ONLINE,
       firmwareVersion: 'sim-1.0.0',
       boundEntityId: vehicleId,
-      lastHeartbeatAt: isoNow(),
+      lastHeartbeatAt: clock.iso(),
       signalStrength: 92,
     })),
   ];
 
-  for (const device of devices) watchdog.beat(device.id);
+  for (const device of devices) watchdog.beat(device.id, clock.now());
 
-  const status = new SimulatedHardwareStatusProvider(devices, watchdog);
-  const gps = new SimulatedGpsProvider(random);
-  const signals = new SimulatedSignalController(controllers);
-  const button = new SimulatedEmergencyButton(vehicleDeviceIds);
+  const status = new SimulatedHardwareStatusProvider(devices, watchdog, clock);
+  const gps = new SimulatedGpsProvider(random, clock);
+  const signals = new SimulatedSignalController(controllers, clock);
+  const button = new SimulatedEmergencyButton(vehicleDeviceIds, clock);
 
   return {
     mode: HardwareMode.SIMULATED,

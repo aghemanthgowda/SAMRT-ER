@@ -96,6 +96,12 @@ export interface Vehicle {
   hardwareDeviceId: string;
   /** Facility the vehicle is normally stationed at. */
   baseFacilityId: string;
+  /**
+   * Where the unit actually waits between calls. Often not the base facility:
+   * an ambulance posts up on a main road to cut response time rather than
+   * sitting in the hospital yard.
+   */
+  standbyPosition: LatLng;
   /** Free-flow cruising speed used for ETA when no live traffic data exists (km/h). */
   cruisingSpeedKph: number;
   active: boolean;

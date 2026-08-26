@@ -262,6 +262,7 @@ export function advanceCorridor(input: CorridorAdvanceInput): CorridorAdvanceRes
   // Arriving is itself grounds for release.
   const routeLengthM = pathLengthM(input.route.path);
   const arrived = routeLengthM > 0 && travelled >= routeLengthM - tuning.releaseDistanceM;
+  const nowMs = new Date(now).getTime();
 
   const changed: CorridorAdvanceResult['changed'] = [];
   const allocations = input.corridor.allocations.map((allocation) => ({ ...allocation }));
@@ -293,6 +294,20 @@ export function advanceCorridor(input: CorridorAdvanceInput): CorridorAdvanceRes
       next = JunctionState.PREPARING;
       preparingBudget -= 1;
     } else {
+      next = JunctionState.NORMAL;
+    }
+
+    // A time-slotted allocation has been deliberately deferred so a
+    // higher-priority vehicle can clear the junction first. Until that window
+    // opens the junction must not be claimed: asking for green early is a
+    // request the safety validator is obliged to refuse, and repeating it
+    // would burn the corridor's retry budget on a junction that was never
+    // going to be granted yet. Waiting is the whole point of the slot.
+    if (
+      allocation.timeSlotted &&
+      next !== JunctionState.RELEASED &&
+      nowMs < new Date(allocation.startsAt).getTime()
+    ) {
       next = JunctionState.NORMAL;
     }
 

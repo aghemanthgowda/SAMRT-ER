@@ -104,3 +104,5 @@ export type { SimulatedHardwareBundle, SimulatedHardwareOptions } from './hardwa
 export { formatClock, formatDistance, formatEta, isoAdd, isoNow, secondsBetween, secondsUntil } from './util/time.js';
 export { nextId, resetIds } from './util/id.js';
 export { SeededRandom } from './util/random.js';
+export { SimulationClock, SystemClock } from './util/clock.js';
+export type { Clock } from './util/clock.js';
