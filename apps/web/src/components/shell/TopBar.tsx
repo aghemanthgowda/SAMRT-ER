@@ -6,13 +6,12 @@ import { useOpsStore } from '@/stores/opsStore';
 import type { ReactNode } from 'react';
 
 /**
- * The console header.
+ * Header for the destination dashboards.
  *
- * Carries the four things an operator must be able to see without looking for
- * them: who they are signed in as, whether the data in front of them is live,
- * the time, and a way out. Connection state is not a subtle indicator — a
- * dashboard showing stale positions is actively dangerous, so a dropped link
- * is stated in words.
+ * Hospital, fire and police consoles are simpler than the controller's and do
+ * not need a navigation column, so they carry a single bar with the four
+ * things an operator must be able to see without looking for them: who they
+ * are signed in as, whether the data is live, the time, and a way out.
  */
 export function TopBar({ subtitle, children }: { subtitle?: string; children?: ReactNode }) {
   const now = useNow();
@@ -20,44 +19,44 @@ export function TopBar({ subtitle, children }: { subtitle?: string; children?: R
   const logout = useAuthStore((state) => state.logout);
   const connection = useOpsStore((state) => state.connection);
 
-  const connectionStyles: Record<string, { className: string; label: string; live: boolean }> = {
-    live: { className: 'text-status-ok', label: 'Live', live: true },
-    connecting: { className: 'text-ground-400', label: 'Connecting', live: false },
-    reconnecting: { className: 'text-status-high', label: 'Reconnecting', live: false },
-    offline: { className: 'text-status-critical', label: 'Disconnected', live: false },
+  const link: Record<string, { className: string; label: string; live: boolean }> = {
+    live: { className: 'text-ok-600', label: 'Live', live: true },
+    connecting: { className: 'text-ink-400', label: 'Connecting', live: false },
+    reconnecting: { className: 'text-warn-600', label: 'Reconnecting', live: false },
+    offline: { className: 'text-critical-600', label: 'Disconnected', live: false },
   };
-  const link = connectionStyles[connection] ?? connectionStyles.offline!;
+  const state = link[connection] ?? link.offline!;
 
   return (
-    <header className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-ground-700 bg-ground-900 px-3">
+    <header className="flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-4">
       <div className="flex min-w-0 items-center gap-2.5">
-        <div className="flex size-6 shrink-0 items-center justify-center rounded-[3px] bg-accent-500">
-          <Radio className="size-3.5 text-white" />
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-600">
+          <Radio className="size-[18px] text-white" />
         </div>
         <div className="min-w-0">
-          <h1 className="text-[13px] font-semibold leading-tight tracking-tight text-ground-50">SMART-ER</h1>
-          {subtitle && <p className="truncate text-[10px] leading-tight text-ground-400">{subtitle}</p>}
+          <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-ink-900">SMART-ER</h1>
+          {subtitle && <p className="truncate text-[11.5px] leading-tight text-ink-500">{subtitle}</p>}
         </div>
       </div>
 
       <div className="flex min-w-0 items-center gap-2">{children}</div>
 
       <div className="flex shrink-0 items-center gap-3">
-        <div className={`flex items-center gap-1.5 ${link.className}`} title={`Realtime link: ${link.label}`}>
-          {link.live ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
-          <span className="hidden text-[11px] font-medium sm:inline">{link.label}</span>
+        <div className={`flex items-center gap-1.5 ${state.className}`} title={`Realtime link: ${state.label}`}>
+          {state.live ? <Wifi className="size-4" /> : <WifiOff className="size-4" />}
+          <span className="hidden text-[12px] font-medium sm:inline">{state.label}</span>
         </div>
 
-        <time className="tnum hidden font-mono text-xs text-ground-200 sm:block" dateTime={now.toISOString()}>
+        <time className="tnum hidden font-mono text-[13px] text-ink-700 sm:block" dateTime={now.toISOString()}>
           {formatClock(now)}
         </time>
 
-        <div className="hidden items-center gap-2 border-l border-ground-700 pl-3 md:flex">
+        <div className="hidden items-center border-l border-line pl-3 md:flex">
           <div className="text-right">
-            <p className="text-[11px] font-medium leading-tight text-ground-100">
+            <p className="text-[12.5px] font-medium leading-tight text-ink-800">
               {user?.callSign ?? user?.displayName}
             </p>
-            <p className="text-[10px] leading-tight text-ground-400">{user?.role.replace('_', ' ')}</p>
+            <p className="text-[11px] leading-tight text-ink-500">{user?.role.replace('_', ' ')}</p>
           </div>
         </div>
 
@@ -65,9 +64,9 @@ export function TopBar({ subtitle, children }: { subtitle?: string; children?: R
           type="button"
           onClick={logout}
           title="Sign out"
-          className="flex size-7 items-center justify-center rounded-[3px] border border-ground-600 bg-ground-850 text-ground-300 transition-colors hover:bg-ground-800 hover:text-ground-100"
+          className="flex size-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-500 transition-colors hover:bg-surface-muted hover:text-ink-800"
         >
-          <LogOut className="size-3.5" />
+          <LogOut className="size-4" />
         </button>
       </div>
     </header>

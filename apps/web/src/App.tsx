@@ -39,7 +39,7 @@ export function App() {
 
   if (status === 'restoring') {
     return (
-      <div className="flex min-h-full items-center justify-center bg-ground-950">
+      <div className="flex min-h-full items-center justify-center bg-canvas">
         <Spinner label="Restoring session" />
       </div>
     );

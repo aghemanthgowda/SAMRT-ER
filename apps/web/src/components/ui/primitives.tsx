@@ -4,19 +4,20 @@ import type { ReactNode } from 'react';
 /**
  * Console primitives.
  *
- * Small, unopinionated and deliberately plain. The visual identity of this
- * product comes from density and consistent status colour, not from component
- * decoration, so these mostly exist to stop twenty screens each inventing
- * their own idea of what a panel or a badge looks like.
+ * Small and deliberately plain. The visual identity of this product comes from
+ * consistent spacing and status colour, not from component decoration — these
+ * mostly exist to stop twenty screens each inventing their own idea of what a
+ * card or a badge looks like.
  */
 
-export function Panel({
+export function Card({
   title,
   actions,
   children,
   className,
   bodyClassName,
   footer,
+  noPadding,
 }: {
   title?: ReactNode;
   actions?: ReactNode;
@@ -24,20 +25,25 @@ export function Panel({
   className?: string;
   bodyClassName?: string;
   footer?: ReactNode;
+  /** Lists and maps manage their own padding. */
+  noPadding?: boolean;
 }) {
   return (
-    <section className={clsx('panel', className)}>
+    <section className={clsx('card', className)}>
       {(title || actions) && (
-        <header className="panel-header">
-          {typeof title === 'string' ? <h2 className="panel-title">{title}</h2> : title}
-          {actions && <div className="flex items-center gap-1.5">{actions}</div>}
+        <header className="card-header">
+          {typeof title === 'string' ? <h2 className="card-title">{title}</h2> : title}
+          {actions && <div className="flex items-center gap-2">{actions}</div>}
         </header>
       )}
-      <div className={clsx('panel-body', bodyClassName)}>{children}</div>
-      {footer && <footer className="border-t border-ground-700 px-2.5 py-1.5">{footer}</footer>}
+      <div className={clsx('card-body', !noPadding && 'p-4', bodyClassName)}>{children}</div>
+      {footer && <footer className="border-t border-line px-4 py-2.5">{footer}</footer>}
     </section>
   );
 }
+
+/** Kept as an alias so existing panels do not all have to be renamed at once. */
+export const Panel = Card;
 
 export function Badge({
   className,
@@ -74,8 +80,8 @@ export function Field({
 }) {
   return (
     <div className={clsx('min-w-0', className)}>
-      <div className="text-[10px] font-medium uppercase tracking-wider text-ground-400">{label}</div>
-      <div className={clsx('truncate text-ground-100', mono && 'tnum font-mono')}>{value}</div>
+      <div className="text-[11px] font-medium uppercase tracking-wide text-ink-400">{label}</div>
+      <div className={clsx('truncate text-[13px] text-ink-800', mono && 'tnum font-mono')}>{value}</div>
     </div>
   );
 }
@@ -91,17 +97,17 @@ export function Button({
   size?: 'sm' | 'md' | 'lg';
 }) {
   const variants: Record<string, string> = {
-    default: 'bg-ground-750 text-ground-100 border-ground-600 hover:bg-ground-700',
-    primary: 'bg-accent-500 text-white border-accent-600 hover:bg-accent-400',
-    danger: 'bg-status-critical/15 text-status-critical border-status-critical/40 hover:bg-status-critical/25',
-    success: 'bg-status-ok/15 text-status-ok border-status-ok/40 hover:bg-status-ok/25',
-    ghost: 'bg-transparent text-ground-300 border-transparent hover:bg-ground-800 hover:text-ground-100',
+    default: 'bg-surface text-ink-700 border-line hover:bg-surface-muted',
+    primary: 'bg-brand-600 text-white border-brand-600 hover:bg-brand-700',
+    danger: 'bg-critical-50 text-critical-700 border-critical-200 hover:bg-critical-100',
+    success: 'bg-ok-50 text-ok-700 border-ok-200 hover:bg-ok-100',
+    ghost: 'bg-transparent text-ink-500 border-transparent hover:bg-surface-muted hover:text-ink-800',
   };
   const sizes: Record<string, string> = {
-    sm: 'h-6 px-2 text-[11px]',
-    md: 'h-7 px-2.5 text-xs',
+    sm: 'h-7 px-2.5 text-[12px]',
+    md: 'h-9 px-3.5 text-[13px]',
     // Large is for the driver handset, where the target must be thumb-sized.
-    lg: 'h-12 px-4 text-sm',
+    lg: 'h-12 px-4 text-[15px]',
   };
 
   return (
@@ -109,8 +115,8 @@ export function Button({
       type="button"
       {...props}
       className={clsx(
-        'inline-flex items-center justify-center gap-1.5 rounded-[3px] border font-medium',
-        'transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+        'inline-flex items-center justify-center gap-1.5 rounded-lg border font-medium',
+        'transition-colors disabled:cursor-not-allowed disabled:opacity-50',
         variants[variant],
         sizes[size],
         className,
@@ -130,19 +136,19 @@ export function Button({
  */
 export function Empty({ icon, message, hint }: { icon?: ReactNode; message: string; hint?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-1.5 px-4 py-8 text-center">
-      {icon && <div className="text-ground-600">{icon}</div>}
-      <p className="text-xs text-ground-400">{message}</p>
-      {hint && <p className="max-w-[36ch] text-[11px] text-ground-500">{hint}</p>}
+    <div className="flex flex-col items-center justify-center gap-1.5 px-4 py-10 text-center">
+      {icon && <div className="text-ink-300">{icon}</div>}
+      <p className="text-[13px] font-medium text-ink-600">{message}</p>
+      {hint && <p className="max-w-[38ch] text-[12px] leading-relaxed text-ink-400">{hint}</p>}
     </div>
   );
 }
 
 export function Spinner({ label }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 px-4 py-6 text-xs text-ground-400" role="status">
+    <div className="flex items-center justify-center gap-2 px-4 py-8 text-[13px] text-ink-500" role="status">
       <span
-        className="size-3.5 animate-spin rounded-full border-2 border-ground-600 border-t-accent-400"
+        className="size-4 animate-spin rounded-full border-2 border-line-strong border-t-brand-600"
         aria-hidden
       />
       {label ?? 'Loading'}
@@ -152,11 +158,8 @@ export function Spinner({ label }: { label?: string }) {
 
 export function ErrorNotice({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div
-      role="alert"
-      className="m-2 rounded-[3px] border border-status-critical/40 bg-status-critical-dim px-3 py-2"
-    >
-      <p className="text-xs text-status-critical">{message}</p>
+    <div role="alert" className="m-3 rounded-lg border border-critical-200 bg-critical-50 px-3 py-2.5">
+      <p className="text-[13px] text-critical-700">{message}</p>
       {onRetry && (
         <Button size="sm" variant="danger" className="mt-2" onClick={onRetry}>
           Retry
@@ -181,21 +184,56 @@ export function Meter({
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (
     <div
-      className={clsx('h-1.5 w-full overflow-hidden rounded-full bg-ground-800', className)}
+      className={clsx('h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken', className)}
       role="meter"
       aria-valuenow={value}
       aria-valuemin={0}
       aria-valuemax={max}
     >
-      <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${pct}%`, backgroundColor: color }} />
+      <div
+        className="h-full rounded-full transition-[width] duration-300"
+        style={{ width: `${pct}%`, backgroundColor: color }}
+      />
     </div>
   );
 }
 
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="border-b border-ground-800 bg-ground-850/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ground-400">
+    <div className="border-b border-line bg-surface-muted px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
       {children}
     </div>
+  );
+}
+
+/**
+ * A small status dot with a label — the System Status panel's unit, and used
+ * anywhere a service's health needs stating without a full badge.
+ */
+export function StatusDot({ color, pulse }: { color: string; pulse?: boolean }) {
+  return (
+    <span className="relative flex size-2">
+      {pulse && (
+        <span
+          className="absolute inline-flex size-full animate-ping rounded-full opacity-60"
+          style={{ backgroundColor: color }}
+          aria-hidden
+        />
+      )}
+      <span className="relative inline-flex size-2 rounded-full" style={{ backgroundColor: color }} aria-hidden />
+    </span>
+  );
+}
+
+/** "View all" style link used on every dashboard card header. */
+export function CardLink({ onClick, children }: { onClick(): void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-[12.5px] font-medium text-brand-600 transition-colors hover:text-brand-700"
+    >
+      {children}
+    </button>
   );
 }

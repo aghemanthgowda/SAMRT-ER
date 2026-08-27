@@ -39,9 +39,11 @@ function renderMap(overrides: Partial<React.ComponentProps<typeof DemoMap>> = {}
 }
 
 describe('DemoMap', () => {
-  it('labels itself clearly as a fallback so it is never mistaken for the real map', () => {
+  it('labels itself as schematic so it is never mistaken for real geography', () => {
     renderMap();
-    expect(screen.getByText(/Demo map — no Google Maps API key configured/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Schematic map — add a Google Maps API key for real geography/i),
+    ).toBeInTheDocument();
   });
 
   it('renders every junction with its code', () => {

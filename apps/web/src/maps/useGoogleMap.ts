@@ -56,7 +56,7 @@ export function useGoogleMap(options: { center?: google.maps.LatLngLiteral; zoom
           gestureHandling: 'greedy',
           clickableIcons: false,
           keyboardShortcuts: true,
-          backgroundColor: '#0f1720',
+          backgroundColor: '#f4f6f9',
         });
 
         mapRef.current = instance;

@@ -56,7 +56,7 @@ export function junctionMarkerIcon(code: string, color: string, held: boolean): 
     <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
       <g transform="translate(17 17)">
         ${ring}
-        <circle r="${radius}" fill="#0f1720" stroke="${color}" stroke-width="2"/>
+        <circle r="${radius}" fill="#ffffff" stroke="${color}" stroke-width="2.5"/>
         <text x="0" y="${held ? 4 : 3.4}" text-anchor="middle" font-family="Inter, system-ui, sans-serif"
               font-size="${held ? 10 : 8.5}" font-weight="700" fill="${color}">${code}</text>
       </g>
@@ -81,7 +81,7 @@ export function facilityMarkerIcon(kind: string): string {
   };
   return dataUri(`
     <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 22 22">
-      <rect x="1" y="1" width="20" height="20" rx="3" fill="${color}" stroke="#0f1720" stroke-width="1.5"/>
+      <rect x="1" y="1" width="20" height="20" rx="3" fill="${color}" stroke="#ffffff" stroke-width="2"/>
       ${glyph[kind] ?? ''}
     </svg>
   `);
@@ -91,7 +91,7 @@ export function facilityMarkerIcon(kind: string): string {
 export function conflictMarkerIcon(): string {
   return dataUri(`
     <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
-      <path d="M15 4l12 21H3L15 4z" fill="#e5484d" stroke="#0f1720" stroke-width="1.6"/>
+      <path d="M15 4l12 21H3L15 4z" fill="#e5484d" stroke="#ffffff" stroke-width="2"/>
       <path d="M15 12v6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
       <circle cx="15" cy="21.5" r="1.4" fill="#fff"/>
     </svg>

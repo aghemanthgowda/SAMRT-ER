@@ -185,43 +185,54 @@ export function DriverApp() {
       setManualScreen(undefined);
     });
 
+  // Returning to standby has to change server state, not just this screen —
+  // otherwise the unit stays COMPLETED and the crew can never take another call.
+  const returnToStandby = () =>
+    guard(async () => {
+      if (!vehicleId) return;
+      await api.returnToStandby(vehicleId);
+      setDestination(undefined);
+      setNote('');
+      setManualScreen(undefined);
+    });
+
   const junctionCode = (id?: string) =>
     id ? (junctions.find((junction) => junction.id === id)?.code ?? id) : '—';
 
   const corridorState = corridor?.activeJunctionId
-    ? { label: 'Green', tone: 'text-status-ok' }
+    ? { label: 'Green', tone: 'text-ok-600' }
     : corridor?.preparingJunctionIds.length
-      ? { label: 'Preparing', tone: 'text-status-high' }
+      ? { label: 'Preparing', tone: 'text-warn-600' }
       : corridor
-        ? { label: 'Armed', tone: 'text-ground-300' }
-        : { label: 'None', tone: 'text-ground-500' };
+        ? { label: 'Armed', tone: 'text-ink-600' }
+        : { label: 'None', tone: 'text-ink-9000' };
 
   return (
-    <div className="flex min-h-full flex-col bg-ground-950">
+    <div className="flex min-h-full flex-col bg-canvas">
       {/* Header — compact, always shows link state */}
-      <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-ground-700 bg-ground-900 px-3">
+      <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-line bg-surface px-3">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex size-6 shrink-0 items-center justify-center rounded-[3px] bg-accent-500">
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-brand-600">
             <Radio className="size-3.5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="tnum truncate font-mono text-sm font-semibold leading-tight text-ground-50">
+            <p className="tnum truncate font-mono text-sm font-semibold leading-tight text-ink-900">
               {vehicleId ?? 'SMART-ER'}
             </p>
-            <p className="truncate text-[10px] leading-tight text-ground-400">{driver?.name ?? user?.displayName}</p>
+            <p className="truncate text-[10px] leading-tight text-ink-500">{driver?.name ?? user?.displayName}</p>
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
           <span
-            className={`size-2 rounded-full ${connection === 'live' ? 'bg-status-ok' : 'bg-status-critical'}`}
+            className={`size-2 rounded-full ${connection === 'live' ? 'bg-ok-500' : 'bg-critical-500'}`}
             title={connection === 'live' ? 'Connected' : 'Connection lost'}
           />
           <button
             type="button"
             onClick={logout}
             aria-label="Sign out"
-            className="flex size-9 items-center justify-center rounded-[3px] border border-ground-600 bg-ground-850 text-ground-300"
+            className="flex size-9 items-center justify-center rounded-lg border border-line bg-surface-muted text-ink-600"
           >
             <LogOut className="size-4" />
           </button>
@@ -230,9 +241,9 @@ export function DriverApp() {
 
       <main className="flex min-h-0 flex-1 flex-col p-3">
         {error && (
-          <div role="alert" className="mb-3 flex items-start gap-2 rounded-[3px] border border-status-critical/40 bg-status-critical-dim px-3 py-2">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-status-critical" />
-            <p className="text-xs text-status-critical">{error}</p>
+          <div role="alert" className="mb-3 flex items-start gap-2 rounded-lg border border-critical-200 bg-critical-50 px-3 py-2">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-critical-600" />
+            <p className="text-xs text-critical-600">{error}</p>
           </div>
         )}
 
@@ -307,11 +318,7 @@ export function DriverApp() {
           <ArrivedScreen
             destinationName={request?.destination.name ?? 'destination'}
             busy={busy}
-            onReset={() => {
-              setDestination(undefined);
-              setNote('');
-              setManualScreen('home');
-            }}
+            onReset={() => void returnToStandby()}
           />
         )}
       </main>
@@ -353,8 +360,8 @@ function VerifyScreen({
 
   return (
     <div className="flex flex-1 flex-col">
-      <h2 className="text-lg font-semibold text-ground-50">Vehicle verification</h2>
-      <p className="mt-1 text-xs leading-relaxed text-ground-400">
+      <h2 className="text-lg font-semibold text-ink-900">Vehicle verification</h2>
+      <p className="mt-1 text-xs leading-relaxed text-ink-500">
         Your vehicle is identified from your account. Emergency privileges are granted only when every link in the
         chain checks out.
       </p>
@@ -366,32 +373,32 @@ function VerifyScreen({
               key={vehicle.id}
               type="button"
               onClick={() => onSelect(vehicle.id)}
-              className={`flex h-12 w-full items-center justify-between rounded-[3px] border px-3 text-left ${
+              className={`flex h-12 w-full items-center justify-between rounded-lg border px-3 text-left ${
                 vehicleId === vehicle.id
-                  ? 'border-accent-500 bg-accent-500/10'
-                  : 'border-ground-600 bg-ground-850'
+                  ? 'border-brand-500 bg-brand-50'
+                  : 'border-line bg-surface-muted'
               }`}
             >
-              <span className="tnum font-mono text-sm font-semibold text-ground-50">{vehicle.callSign}</span>
-              {vehicleId === vehicle.id && <BadgeCheck className="size-4 text-accent-400" />}
+              <span className="tnum font-mono text-sm font-semibold text-ink-900">{vehicle.callSign}</span>
+              {vehicleId === vehicle.id && <BadgeCheck className="size-4 text-brand-600" />}
             </button>
           ))}
         </div>
       )}
 
-      <div className="mt-4 rounded-[3px] border border-ground-700 bg-ground-900 p-3">
+      <div className="mt-4 rounded-lg border border-line bg-surface p-3">
         {verifying ? (
-          <p className="text-xs text-ground-400">Checking identity chain…</p>
+          <p className="text-xs text-ink-500">Checking identity chain…</p>
         ) : (
           <ul className="space-y-2">
             {checks.map((check) => (
               <li key={check.label} className="flex items-center gap-2">
                 {check.ok ? (
-                  <CheckCircle2 className="size-4 shrink-0 text-status-ok" />
+                  <CheckCircle2 className="size-4 shrink-0 text-ok-600" />
                 ) : (
-                  <ShieldAlert className="size-4 shrink-0 text-status-critical" />
+                  <ShieldAlert className="size-4 shrink-0 text-critical-600" />
                 )}
-                <span className={`text-xs ${check.ok ? 'text-ground-200' : 'text-status-critical'}`}>
+                <span className={`text-xs ${check.ok ? 'text-ink-700' : 'text-critical-600'}`}>
                   {check.label}
                 </span>
               </li>
@@ -400,9 +407,9 @@ function VerifyScreen({
         )}
 
         {verification && !verification.verified && verification.failures.length > 0 && (
-          <div className="mt-3 border-t border-ground-800 pt-2">
+          <div className="mt-3 border-t border-line pt-2">
             {verification.failures.map((failure) => (
-              <p key={failure} className="text-[11px] leading-relaxed text-status-critical">
+              <p key={failure} className="text-[11px] leading-relaxed text-critical-600">
                 {failure}
               </p>
             ))}
@@ -438,30 +445,30 @@ function HomeScreen({
 }) {
   return (
     <div className="flex flex-1 flex-col">
-      <div className="rounded-[3px] border border-ground-700 bg-ground-900 p-4">
+      <div className="rounded-lg border border-line bg-surface p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="tnum font-mono text-2xl font-semibold text-ground-50">{vehicleId}</p>
-            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-status-ok">
+            <p className="tnum font-mono text-2xl font-semibold text-ink-900">{vehicleId}</p>
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-ok-600">
               <BadgeCheck className="size-3.5" />
               Verified
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wider text-ground-400">GPS</p>
-            <p className={`flex items-center gap-1 text-sm font-medium ${gpsOk ? 'text-status-ok' : 'text-violet-400'}`}>
+            <p className="text-[10px] uppercase tracking-wider text-ink-500">GPS</p>
+            <p className={`flex items-center gap-1 text-sm font-medium ${gpsOk ? 'text-ok-600' : 'text-violet-500'}`}>
               <SatelliteDish className="size-3.5" />
               {gpsOk ? 'Connected' : 'No lock'}
             </p>
-            {gpsOk && <p className="tnum font-mono text-[10px] text-ground-500">±{Math.round(accuracy)} m</p>}
+            {gpsOk && <p className="tnum font-mono text-[10px] text-ink-9000">±{Math.round(accuracy)} m</p>}
           </div>
         </div>
       </div>
 
-      <div className="mt-4 rounded-[3px] border border-ground-700 bg-ground-900 p-4">
-        <p className="text-xs text-ground-400">Status</p>
-        <p className="mt-0.5 text-lg font-medium text-ground-100">Standby</p>
-        <p className="mt-2 text-xs leading-relaxed text-ground-400">
+      <div className="mt-4 rounded-lg border border-line bg-surface p-4">
+        <p className="text-xs text-ink-500">Status</p>
+        <p className="mt-0.5 text-lg font-medium text-ink-800">Standby</p>
+        <p className="mt-2 text-xs leading-relaxed text-ink-500">
           No active emergency. Request a green corridor when you are responding to a call.
         </p>
       </div>
@@ -489,13 +496,13 @@ function DestinationScreen({
 }) {
   return (
     <div className="flex flex-1 flex-col">
-      <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1.5 self-start text-xs text-ground-400">
+      <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1.5 self-start text-xs text-ink-500">
         <ArrowLeft className="size-4" />
         Back
       </button>
 
-      <h2 className="text-lg font-semibold text-ground-50">Destination</h2>
-      <p className="mt-1 text-xs text-ground-400">The receiving hospital is notified as soon as your request is approved.</p>
+      <h2 className="text-lg font-semibold text-ink-900">Destination</h2>
+      <p className="mt-1 text-xs text-ink-500">The receiving hospital is notified as soon as your request is approved.</p>
 
       <div className="mt-4 space-y-2">
         {facilities.map((facility) => (
@@ -503,16 +510,16 @@ function DestinationScreen({
             key={facility.id}
             type="button"
             onClick={() => onSelect(facility)}
-            className={`flex min-h-14 w-full items-start gap-2.5 rounded-[3px] border px-3 py-2.5 text-left ${
-              selected?.id === facility.id ? 'border-accent-500 bg-accent-500/10' : 'border-ground-600 bg-ground-850'
+            className={`flex min-h-14 w-full items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left ${
+              selected?.id === facility.id ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted'
             }`}
           >
-            <MapPin className="mt-0.5 size-4 shrink-0 text-status-critical" />
+            <MapPin className="mt-0.5 size-4 shrink-0 text-critical-600" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-ground-50">{facility.name}</p>
-              <p className="truncate text-[11px] text-ground-400">{facility.address}</p>
+              <p className="text-sm font-medium text-ink-900">{facility.name}</p>
+              <p className="truncate text-[11px] text-ink-500">{facility.address}</p>
               {facility.specialities && (
-                <p className="truncate text-[10px] text-ground-500">{facility.specialities.join(' · ')}</p>
+                <p className="truncate text-[10px] text-ink-9000">{facility.specialities.join(' · ')}</p>
               )}
             </div>
           </button>
@@ -545,13 +552,13 @@ function SeverityScreen({
 
   return (
     <div className="flex flex-1 flex-col">
-      <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1.5 self-start text-xs text-ground-400">
+      <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1.5 self-start text-xs text-ink-500">
         <ArrowLeft className="size-4" />
         Back
       </button>
 
-      <h2 className="text-lg font-semibold text-ground-50">Severity</h2>
-      <p className="mt-1 flex items-center gap-1.5 text-xs text-ground-400">
+      <h2 className="text-lg font-semibold text-ink-900">Severity</h2>
+      <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-500">
         <MapPin className="size-3.5" />
         {destination.name}
       </p>
@@ -565,8 +572,8 @@ function SeverityScreen({
               key={option}
               type="button"
               onClick={() => onSeverity(option)}
-              className={`flex h-16 flex-col items-center justify-center rounded-[3px] border ${
-                active ? 'border-2' : 'border-ground-600 bg-ground-850'
+              className={`flex h-16 flex-col items-center justify-center rounded-lg border ${
+                active ? 'border-2' : 'border-line bg-surface-muted'
               }`}
               style={active ? { borderColor: style.hex, backgroundColor: `${style.hex}18` } : undefined}
             >
@@ -578,7 +585,7 @@ function SeverityScreen({
         })}
       </div>
 
-      <label htmlFor="note" className="mt-4 block text-[11px] font-medium uppercase tracking-wider text-ground-400">
+      <label htmlFor="note" className="mt-4 block text-[11px] font-medium uppercase tracking-wider text-ink-500">
         Note for the control room (optional)
       </label>
       <textarea
@@ -588,7 +595,7 @@ function SeverityScreen({
         rows={3}
         maxLength={200}
         placeholder="e.g. cardiac arrest, 62M, CPR in progress"
-        className="mt-1 w-full resize-none rounded-[3px] border border-ground-600 bg-ground-850 px-2.5 py-2 text-sm text-ground-100 outline-none placeholder:text-ground-500 focus:border-accent-500"
+        className="mt-1 w-full resize-none rounded-lg border border-line bg-surface-muted px-2.5 py-2 text-sm text-ink-800 outline-none placeholder:text-ink-9000 focus:border-brand-500"
       />
 
       <div className="mt-auto pt-4">
@@ -619,12 +626,12 @@ function PendingScreen({
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <Clock className="size-12 animate-pulse text-status-high" />
-        <h2 className="mt-4 text-xl font-semibold text-ground-50">Awaiting approval</h2>
-        <p className="mt-2 max-w-[30ch] text-sm leading-relaxed text-ground-400">
+        <Clock className="size-12 animate-pulse text-warn-600" />
+        <h2 className="mt-4 text-xl font-semibold text-ink-900">Awaiting approval</h2>
+        <p className="mt-2 max-w-[30ch] text-sm leading-relaxed text-ink-500">
           The control room is verifying your vehicle and planning a corridor to {request.destination.name}.
         </p>
-        <p className="tnum mt-3 font-mono text-xs text-ground-500">{request.id}</p>
+        <p className="tnum mt-3 font-mono text-xs text-ink-9000">{request.id}</p>
       </div>
 
       <Button variant="default" size="lg" className="h-12 w-full" disabled={busy} onClick={onCancel}>
@@ -662,33 +669,33 @@ function ActiveScreen({
   return (
     <div className="flex flex-1 flex-col">
       {/* The three figures that matter, sized to be read at a glance. */}
-      <div className="rounded-[3px] border border-status-ok/40 bg-status-ok-dim p-4 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-status-ok">Corridor approved</p>
-        <p className="tnum mt-1 font-mono text-5xl font-bold leading-none text-ground-50">{formatEta(etaSeconds)}</p>
-        <p className="mt-1.5 text-xs text-ground-300">
+      <div className="rounded-lg border border-ok-200 bg-ok-50 p-4 text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-ok-600">Corridor approved</p>
+        <p className="tnum mt-1 font-mono text-5xl font-bold leading-none text-ink-900">{formatEta(etaSeconds)}</p>
+        <p className="mt-1.5 text-xs text-ink-600">
           {destinationName}
           {distanceRemainingM !== undefined && ` · ${formatDistance(distanceRemainingM)}`}
         </p>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="rounded-[3px] border border-ground-700 bg-ground-900 p-3 text-center">
-          <p className="text-[10px] uppercase tracking-wider text-ground-400">Next junction</p>
-          <p className="tnum mt-1 flex items-center justify-center gap-1.5 font-mono text-2xl font-semibold text-ground-50">
-            <Navigation className="size-4 text-ground-400" />
+        <div className="rounded-lg border border-line bg-surface p-3 text-center">
+          <p className="text-[10px] uppercase tracking-wider text-ink-500">Next junction</p>
+          <p className="tnum mt-1 flex items-center justify-center gap-1.5 font-mono text-2xl font-semibold text-ink-900">
+            <Navigation className="size-4 text-ink-500" />
             {nextJunction}
           </p>
         </div>
-        <div className="rounded-[3px] border border-ground-700 bg-ground-900 p-3 text-center">
-          <p className="text-[10px] uppercase tracking-wider text-ground-400">Corridor</p>
+        <div className="rounded-lg border border-line bg-surface p-3 text-center">
+          <p className="text-[10px] uppercase tracking-wider text-ink-500">Corridor</p>
           <p className={`mt-1 text-2xl font-semibold ${corridorTone}`}>{corridorLabel}</p>
         </div>
       </div>
 
       {!gpsOk && (
-        <div className="mt-3 flex items-start gap-2 rounded-[3px] border border-violet-500/40 bg-violet-500/10 px-3 py-2">
-          <SatelliteDish className="mt-0.5 size-4 shrink-0 text-violet-400" />
-          <p className="text-xs text-violet-300">
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-violet-100 bg-violet-50 px-3 py-2">
+          <SatelliteDish className="mt-0.5 size-4 shrink-0 text-violet-500" />
+          <p className="text-xs text-violet-600">
             GPS lock lost. The control room is holding your last confirmed position — junctions ahead will not be
             released until the fix returns.
           </p>
@@ -696,12 +703,12 @@ function ActiveScreen({
       )}
 
       {rerouted && (
-        <div className="mt-3 flex items-start gap-2 rounded-[3px] border border-status-medium/40 bg-status-medium-dim px-3 py-2">
-          <RefreshCw className="mt-0.5 size-4 shrink-0 text-status-medium" />
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-info-200 bg-info-50 px-3 py-2">
+          <RefreshCw className="mt-0.5 size-4 shrink-0 text-info-600" />
           <div>
-            <p className="text-xs font-medium text-status-medium">Route updated</p>
+            <p className="text-xs font-medium text-info-600">Route updated</p>
             {rerouteExplanation && (
-              <p className="mt-0.5 text-[11px] leading-relaxed text-ground-300">{rerouteExplanation}</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-ink-600">{rerouteExplanation}</p>
             )}
           </div>
         </div>
@@ -728,9 +735,9 @@ function ArrivedScreen({
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <CheckCircle2 className="size-14 text-status-ok" />
-        <h2 className="mt-4 text-xl font-semibold text-ground-50">Arrived</h2>
-        <p className="mt-2 max-w-[32ch] text-sm leading-relaxed text-ground-400">
+        <CheckCircle2 className="size-14 text-ok-600" />
+        <h2 className="mt-4 text-xl font-semibold text-ink-900">Arrived</h2>
+        <p className="mt-2 max-w-[32ch] text-sm leading-relaxed text-ink-500">
           You have reached {destinationName}. The corridor has been released and all junctions have returned to their
           normal programme.
         </p>

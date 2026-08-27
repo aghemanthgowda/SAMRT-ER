@@ -29,7 +29,7 @@ export function DetailPanel({ vehicleById }: { vehicleById: Map<string, Vehicle>
   if (!selection) {
     return (
       <div className="flex h-full items-center justify-center px-4 py-6 text-center">
-        <p className="max-w-[34ch] text-[11px] leading-relaxed text-ground-500">
+        <p className="max-w-[34ch] text-[11px] leading-relaxed text-ink-9000">
           Select a unit, junction, route or conflict — on the map or in any list — to inspect it.
         </p>
       </div>
@@ -38,15 +38,15 @@ export function DetailPanel({ vehicleById }: { vehicleById: Map<string, Vehicle>
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-ground-800 px-2.5 py-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-ground-400">
+      <div className="flex items-center justify-between gap-2 border-b border-line px-2.5 py-1.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">
           {selection.kind}
         </span>
         <button
           type="button"
           onClick={() => select(undefined)}
           aria-label="Close detail"
-          className="text-ground-500 transition-colors hover:text-ground-200"
+          className="text-ink-9000 transition-colors hover:text-ink-700"
         >
           <X className="size-3.5" />
         </button>
@@ -102,13 +102,13 @@ function VehicleDetail({ vehicleId, vehicleById }: { vehicleId: string; vehicleB
   };
 
   return (
-    <div className="divide-y divide-ground-800">
+    <div className="divide-y divide-line">
       <section className="px-2.5 py-2">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="tnum font-mono text-sm font-semibold text-ground-50">{vehicle.callSign}</h3>
+          <h3 className="tnum font-mono text-sm font-semibold text-ink-900">{vehicle.callSign}</h3>
           <Badge className={style.chip}>{style.label}</Badge>
         </div>
-        <p className="text-[11px] text-ground-400">
+        <p className="text-[11px] text-ink-500">
           {VEHICLE_KIND_LABEL[vehicle.kind]} · {vehicle.registrationNumber}
         </p>
 
@@ -120,7 +120,7 @@ function VehicleDetail({ vehicleId, vehicleById }: { vehicleId: string; vehicleB
           <Field
             label="GPS"
             value={
-              <span className={state.gpsOk ? 'text-status-ok' : 'text-violet-400'}>
+              <span className={state.gpsOk ? 'text-ok-600' : 'text-violet-500'}>
                 {state.gpsOk ? `Locked ±${Math.round(state.gpsAccuracy)} m` : 'No lock'}
               </span>
             }
@@ -131,7 +131,7 @@ function VehicleDetail({ vehicleId, vehicleById }: { vehicleId: string; vehicleB
 
       {/* Identity chain — what the controller verifies before granting a corridor. */}
       <section className="px-2.5 py-2">
-        <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ground-400">Identity chain</h4>
+        <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">Identity chain</h4>
         {identity ? (
           <div className="space-y-1">
             <ChainLink label="Driver" value={identity.authorizedDrivers.map((driver) => `${driver.id} ${driver.name}`).join(', ') || '—'} />
@@ -155,19 +155,19 @@ function VehicleDetail({ vehicleId, vehicleById }: { vehicleId: string; vehicleB
 
       {request && (
         <section className="px-2.5 py-2">
-          <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ground-400">Active request</h4>
+          <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">Active request</h4>
           <div className="flex items-center gap-1.5">
-            <span className="tnum font-mono text-[11px] text-ground-100">{request.id}</span>
+            <span className="tnum font-mono text-[11px] text-ink-800">{request.id}</span>
             <Badge className={SEVERITY_STYLE[request.severity].chip}>{SEVERITY_STYLE[request.severity].label}</Badge>
           </div>
-          <p className="mt-0.5 text-[11px] text-ground-300">{request.destination.name}</p>
-          {request.note && <p className="mt-0.5 text-[11px] italic text-ground-400">{request.note}</p>}
+          <p className="mt-0.5 text-[11px] text-ink-600">{request.destination.name}</p>
+          {request.note && <p className="mt-0.5 text-[11px] italic text-ink-500">{request.note}</p>}
         </section>
       )}
 
       {corridor && (
         <section className="px-2.5 py-2">
-          <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ground-400">
+          <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">
             Rolling corridor
           </h4>
           <ol className="space-y-0.5">
@@ -177,9 +177,9 @@ function VehicleDetail({ vehicleId, vehicleById }: { vehicleId: string; vehicleB
                 <li key={allocation.id} className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5">
                     <span className="size-1.5 rounded-full" style={{ backgroundColor: allocationStyle.hex }} aria-hidden />
-                    <span className="tnum font-mono text-[11px] text-ground-200">{codeOf(allocation.junctionId)}</span>
+                    <span className="tnum font-mono text-[11px] text-ink-700">{codeOf(allocation.junctionId)}</span>
                     {allocation.timeSlotted && (
-                      <span className="text-[9px] uppercase tracking-wider text-status-medium">slotted</span>
+                      <span className="text-[9px] uppercase tracking-wider text-info-600">slotted</span>
                     )}
                   </span>
                   <span className="text-[10px]" style={{ color: allocationStyle.hex }}>
@@ -207,8 +207,8 @@ function VehicleDetail({ vehicleId, vehicleById }: { vehicleId: string; vehicleB
 function ChainLink({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="w-24 shrink-0 text-[10px] uppercase tracking-wider text-ground-500">{label}</span>
-      <span className={`min-w-0 flex-1 truncate text-[11px] ${warn ? 'text-status-critical' : 'text-ground-200'}`}>
+      <span className="w-24 shrink-0 text-[10px] uppercase tracking-wider text-ink-9000">{label}</span>
+      <span className={`min-w-0 flex-1 truncate text-[11px] ${warn ? 'text-critical-600' : 'text-ink-700'}`}>
         {value}
       </span>
     </div>
@@ -234,13 +234,13 @@ function JunctionDetailView({ junctionId }: { junctionId: string }) {
   const style = JUNCTION_STATE_STYLE[state];
 
   return (
-    <div className="divide-y divide-ground-800">
+    <div className="divide-y divide-line">
       <section className="px-2.5 py-2">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="tnum font-mono text-sm font-semibold text-ground-50">{detail.junction.code}</h3>
+          <h3 className="tnum font-mono text-sm font-semibold text-ink-900">{detail.junction.code}</h3>
           <Badge className={style.chip}>{style.label}</Badge>
         </div>
-        <p className="text-[11px] text-ground-400">{detail.junction.name}</p>
+        <p className="text-[11px] text-ink-500">{detail.junction.name}</p>
 
         <div className="mt-2 grid grid-cols-2 gap-2">
           <Field label="Controller" value={detail.junction.hardwareDeviceId} mono />
@@ -264,7 +264,7 @@ function JunctionDetailView({ junctionId }: { junctionId: string }) {
       </section>
 
       <section className="px-2.5 py-2">
-        <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ground-400">Signal aspects</h4>
+        <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">Signal aspects</h4>
         <div className="grid grid-cols-2 gap-1">
           {detail.junction.approaches.map((approach) => {
             const aspect = detail.aspects[approach.id] ?? 'RED';
@@ -276,10 +276,10 @@ function JunctionDetailView({ junctionId }: { junctionId: string }) {
               FLASHING_RED: '#8b5cf6',
             };
             return (
-              <div key={approach.id} className="flex items-center gap-1.5 rounded-[3px] bg-ground-850 px-1.5 py-1">
+              <div key={approach.id} className="flex items-center gap-1.5 rounded-lg bg-surface-muted px-1.5 py-1">
                 <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colors[aspect] ?? '#4d6076' }} aria-hidden />
-                <span className="min-w-0 flex-1 truncate text-[10px] text-ground-300">{approach.name}</span>
-                <span className="tnum font-mono text-[9px] text-ground-400">{aspect}</span>
+                <span className="min-w-0 flex-1 truncate text-[10px] text-ink-600">{approach.name}</span>
+                <span className="tnum font-mono text-[9px] text-ink-500">{aspect}</span>
               </div>
             );
           })}
@@ -288,21 +288,21 @@ function JunctionDetailView({ junctionId }: { junctionId: string }) {
 
       {detail.recentCommands.length > 0 && (
         <section className="px-2.5 py-2">
-          <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ground-400">
+          <h4 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">
             Recent commands
           </h4>
           <ul className="space-y-1">
             {[...detail.recentCommands].reverse().slice(0, 8).map((command) => (
               <li key={command.id} className="text-[10px]">
                 <div className="flex items-center gap-1.5">
-                  <span className={command.safetyApproved ? 'text-status-ok' : 'text-status-critical'}>
+                  <span className={command.safetyApproved ? 'text-ok-600' : 'text-critical-600'}>
                     {command.safetyApproved ? '✓' : '✕'}
                   </span>
-                  <span className="tnum font-mono text-ground-300">{command.aspect}</span>
-                  <time className="tnum font-mono text-ground-500">{formatClock(command.issuedAt)}</time>
+                  <span className="tnum font-mono text-ink-600">{command.aspect}</span>
+                  <time className="tnum font-mono text-ink-9000">{formatClock(command.issuedAt)}</time>
                 </div>
                 {!command.safetyApproved && command.safetyNotes[0] && (
-                  <p className="pl-4 leading-relaxed text-status-critical/80">{command.safetyNotes[0]}</p>
+                  <p className="pl-4 leading-relaxed text-critical-600">{command.safetyNotes[0]}</p>
                 )}
               </li>
             ))}
@@ -332,7 +332,7 @@ function ConflictDetail({ conflictId }: { conflictId: string }) {
   return (
     <div className="space-y-2 px-2.5 py-2">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="tnum font-mono text-sm font-semibold text-ground-50">{conflict.junctionId}</h3>
+        <h3 className="tnum font-mono text-sm font-semibold text-ink-900">{conflict.junctionId}</h3>
         <Badge className={style.chip}>{style.label}</Badge>
       </div>
 
@@ -345,16 +345,16 @@ function ConflictDetail({ conflictId }: { conflictId: string }) {
         )}
       </div>
 
-      <div className="rounded-[3px] border border-ground-700 bg-ground-850 px-2 py-1.5">
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-ground-400">Decision</p>
-        <p className="text-[11px] leading-relaxed text-ground-200">{conflict.explanation}</p>
+      <div className="rounded-lg border border-line bg-surface-muted px-2 py-1.5">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-500">Decision</p>
+        <p className="text-[11px] leading-relaxed text-ink-700">{conflict.explanation}</p>
       </div>
 
       {conflict.originalEtaSeconds !== undefined && conflict.newEtaSeconds !== undefined && (
         <div className="flex items-center gap-2 text-[11px]">
-          <span className="tnum font-mono text-ground-400">{formatEta(conflict.originalEtaSeconds)}</span>
-          <span className="text-ground-600">→</span>
-          <span className="tnum font-mono font-semibold text-ground-50">{formatEta(conflict.newEtaSeconds)}</span>
+          <span className="tnum font-mono text-ink-500">{formatEta(conflict.originalEtaSeconds)}</span>
+          <span className="text-ink-300">→</span>
+          <span className="tnum font-mono font-semibold text-ink-900">{formatEta(conflict.newEtaSeconds)}</span>
         </div>
       )}
     </div>
@@ -368,11 +368,11 @@ function IncidentDetail({ incidentId }: { incidentId: string }) {
   return (
     <div className="space-y-2 px-2.5 py-2">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="tnum font-mono text-sm font-semibold text-ground-50">{incident.code}</h3>
+        <h3 className="tnum font-mono text-sm font-semibold text-ink-900">{incident.code}</h3>
         <Badge className={SEVERITY_STYLE[incident.severity].chip}>{SEVERITY_STYLE[incident.severity].label}</Badge>
       </div>
-      <p className="text-[11px] text-ground-300">{incident.address}</p>
-      <p className="text-[11px] leading-relaxed text-ground-400">{incident.description}</p>
+      <p className="text-[11px] text-ink-600">{incident.address}</p>
+      <p className="text-[11px] leading-relaxed text-ink-500">{incident.description}</p>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Status" value={incident.status} />
         <Field label="Reported" value={formatClock(incident.reportedAt)} mono />
@@ -394,8 +394,8 @@ function FacilityDetail({ facilityId }: { facilityId: string }) {
 
   return (
     <div className="space-y-2 px-2.5 py-2">
-      <h3 className="text-sm font-semibold text-ground-50">{facility.name}</h3>
-      <p className="text-[11px] text-ground-400">{facility.address}</p>
+      <h3 className="text-sm font-semibold text-ink-900">{facility.name}</h3>
+      <p className="text-[11px] text-ink-500">{facility.address}</p>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Type" value={facility.kind.replace('_', ' ')} />
         <Field label="Contact" value={facility.contactNumber} mono />
@@ -403,10 +403,10 @@ function FacilityDetail({ facilityId }: { facilityId: string }) {
       </div>
       {facility.specialities && facility.specialities.length > 0 && (
         <div>
-          <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-ground-400">Specialities</p>
+          <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-ink-500">Specialities</p>
           <div className="flex flex-wrap gap-1">
             {facility.specialities.map((speciality) => (
-              <Badge key={speciality} className="border-ground-600 bg-ground-800 text-ground-200">
+              <Badge key={speciality} className="border-line bg-surface-sunken text-ink-700">
                 {speciality}
               </Badge>
             ))}
@@ -414,7 +414,7 @@ function FacilityDetail({ facilityId }: { facilityId: string }) {
         </div>
       )}
       {nearby && (
-        <p className="text-[10px] text-ground-500">
+        <p className="text-[10px] text-ink-9000">
           Nearest modelled road: {nearby.name} ({TRAFFIC_STYLE[nearby.traffic].label.toLowerCase()})
         </p>
       )}

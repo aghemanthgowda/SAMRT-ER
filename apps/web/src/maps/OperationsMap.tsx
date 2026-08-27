@@ -105,9 +105,9 @@ export function OperationsMap({
       <div className={className}>
         {availability === 'error' && error && (
           <div className="absolute inset-x-0 top-0 z-20 flex justify-center">
-            <div className="mt-2 flex items-start gap-2 rounded-[3px] border border-status-critical/40 bg-status-critical-dim px-3 py-2">
-              <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-status-critical" />
-              <p className="max-w-[52ch] text-[11px] text-status-critical">{error}</p>
+            <div className="mt-3 flex max-w-[60ch] items-start gap-2 rounded-lg border border-critical-200 bg-critical-50 px-3 py-2 shadow-card">
+              <AlertTriangle className="mt-px size-4 shrink-0 text-critical-600" />
+              <p className="text-[12px] leading-relaxed text-critical-700">{error}</p>
             </div>
           </div>
         )}
@@ -136,35 +136,35 @@ export function OperationsMap({
       <div ref={containerRef} className="size-full" role="application" aria-label="Operations map" />
 
       {availability === 'loading' && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-ground-950/80">
-          <div className="flex items-center gap-2 text-xs text-ground-300">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-canvas/80">
+          <div className="flex items-center gap-2 text-[13px] text-ink-600">
             <Loader2 className="size-4 animate-spin" />
             Loading Google Maps
           </div>
         </div>
       )}
 
-      <div className="absolute right-2 top-2 z-10 flex flex-col gap-1">
+      <div className="absolute right-3 top-3 z-10 flex flex-col gap-1.5">
         <button
           type="button"
           onClick={() => setTrafficVisible(!trafficVisible)}
           aria-pressed={trafficVisible}
           title="Toggle Google traffic layer"
-          className={`flex size-7 items-center justify-center rounded-[3px] border transition-colors ${
+          className={`flex size-8 items-center justify-center rounded-lg border shadow-card transition-colors ${
             trafficVisible
-              ? 'border-accent-500 bg-accent-500/20 text-accent-400'
-              : 'border-ground-600 bg-ground-850 text-ground-300 hover:bg-ground-800'
+              ? 'border-brand-500 bg-brand-50 text-brand-600'
+              : 'border-line bg-surface text-ink-500 hover:bg-surface-muted'
           }`}
         >
-          <Layers className="size-3.5" />
+          <Layers className="size-4" />
         </button>
         <button
           type="button"
           onClick={recentre}
           title="Frame all active units"
-          className="flex size-7 items-center justify-center rounded-[3px] border border-ground-600 bg-ground-850 text-ground-300 transition-colors hover:bg-ground-800"
+          className="flex size-8 items-center justify-center rounded-lg border border-line bg-surface text-ink-500 shadow-card transition-colors hover:bg-surface-muted"
         >
-          <Crosshair className="size-3.5" />
+          <Crosshair className="size-4" />
         </button>
       </div>
 
@@ -188,8 +188,8 @@ function MapLegend() {
   ];
 
   return (
-    <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-[3px] border border-ground-700 bg-ground-900/95 px-2.5 py-2">
-      <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider text-ground-400">Junction state</p>
+    <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-lg border border-line bg-surface/95 px-3 py-2 shadow-card">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500">Junction state</p>
       <ul className="space-y-0.5">
         {junctionEntries.map((state) => (
           <li key={state} className="flex items-center gap-1.5">
@@ -198,11 +198,11 @@ function MapLegend() {
               style={{ backgroundColor: JUNCTION_STATE_STYLE[state].hex }}
               aria-hidden
             />
-            <span className="text-[10px] text-ground-300">{JUNCTION_STATE_STYLE[state].label}</span>
+            <span className="text-[11px] text-ink-600">{JUNCTION_STATE_STYLE[state].label}</span>
           </li>
         ))}
       </ul>
-      <p className="mb-1 mt-2 text-[9px] font-semibold uppercase tracking-wider text-ground-400">Unit</p>
+      <p className="mb-1 mt-2.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500">Unit</p>
       <ul className="space-y-0.5">
         {(
           [
@@ -213,7 +213,7 @@ function MapLegend() {
         ).map(([kind, label]) => (
           <li key={kind} className="flex items-center gap-1.5">
             <span className="size-2 rounded-full" style={{ backgroundColor: VEHICLE_KIND_COLOR[kind] }} aria-hidden />
-            <span className="text-[10px] text-ground-300">{label}</span>
+            <span className="text-[11px] text-ink-600">{label}</span>
           </li>
         ))}
       </ul>

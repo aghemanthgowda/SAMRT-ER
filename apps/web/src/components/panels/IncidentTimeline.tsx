@@ -64,9 +64,9 @@ export function IncidentTimeline({ filterVehicleId }: { filterVehicleId?: string
     <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto">
       <ol>
         {events.map((event) => (
-          <li key={event.id} className="flex gap-2 border-b border-ground-800 px-2.5 py-1.5 last:border-b-0">
+          <li key={event.id} className="flex gap-2 border-b border-line px-2.5 py-1.5 last:border-b-0">
             <time
-              className="tnum shrink-0 pt-px font-mono text-[10px] text-ground-500"
+              className="tnum shrink-0 pt-px font-mono text-[10px] text-ink-9000"
               dateTime={event.at}
             >
               {formatClock(event.at)}
@@ -76,7 +76,7 @@ export function IncidentTimeline({ filterVehicleId }: { filterVehicleId?: string
               style={{ backgroundColor: colorFor(event.kind) }}
               aria-hidden
             />
-            <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-ground-200">{event.message}</p>
+            <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-ink-700">{event.message}</p>
           </li>
         ))}
       </ol>

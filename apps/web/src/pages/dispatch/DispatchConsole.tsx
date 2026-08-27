@@ -89,22 +89,22 @@ export function DispatchConsole({ title, vehicleKind, incidentKind, unitNoun }: 
   const resolve = (incidentId: string) => guard(() => api.resolveIncident(incidentId));
 
   return (
-    <div className="flex h-full flex-col bg-ground-950">
+    <div className="flex h-full flex-col bg-canvas">
       <TopBar subtitle={facility?.name ?? title}>
         <div className="hidden items-center gap-3 lg:flex">
           <span className="flex items-center gap-1.5">
-            <span className="text-[10px] uppercase tracking-wider text-ground-500">Open</span>
-            <span className="tnum font-mono text-xs font-semibold text-status-high">{open.length}</span>
+            <span className="text-[10px] uppercase tracking-wider text-ink-9000">Open</span>
+            <span className="tnum font-mono text-xs font-semibold text-warn-600">{open.length}</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="text-[10px] uppercase tracking-wider text-ground-500">{unitNoun}s</span>
-            <span className="tnum font-mono text-xs font-semibold text-ground-100">{units.length}</span>
+            <span className="text-[10px] uppercase tracking-wider text-ink-9000">{unitNoun}s</span>
+            <span className="tnum font-mono text-xs font-semibold text-ink-800">{units.length}</span>
           </span>
         </div>
       </TopBar>
 
       {error && (
-        <p role="alert" className="border-b border-status-critical/30 bg-status-critical-dim px-3 py-1.5 text-[11px] text-status-critical">
+        <p role="alert" className="border-b border-critical-200 bg-critical-50 px-3 py-1.5 text-[11px] text-critical-600">
           {error}
         </p>
       )}
@@ -173,14 +173,14 @@ export function DispatchConsole({ title, vehicleKind, incidentKind, unitNoun }: 
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="flex items-center gap-1.5">
-                          <Truck className="size-3.5 text-ground-400" />
-                          <span className="tnum font-mono text-xs font-semibold text-ground-50">
+                          <Truck className="size-3.5 text-ink-500" />
+                          <span className="tnum font-mono text-xs font-semibold text-ink-900">
                             {vehicle.callSign}
                           </span>
                         </span>
                         <div className="flex items-center gap-1.5">
                           {state?.etaSeconds !== undefined && state.status === VehicleStatus.ACTIVE && (
-                            <span className="tnum font-mono text-[11px] text-ground-200">
+                            <span className="tnum font-mono text-[11px] text-ink-700">
                               {formatEta(state.etaSeconds)}
                             </span>
                           )}
@@ -188,7 +188,7 @@ export function DispatchConsole({ title, vehicleKind, incidentKind, unitNoun }: 
                         </div>
                       </div>
                       {request && (
-                        <p className="mt-0.5 truncate pl-5 text-[11px] text-ground-400">
+                        <p className="mt-0.5 truncate pl-5 text-[11px] text-ink-500">
                           {request.destination.name}
                           {request.status === RequestStatus.PENDING && ' · awaiting controller approval'}
                         </p>
@@ -245,17 +245,17 @@ function IncidentRow({
   );
 
   return (
-    <article className="border-b border-ground-800 px-3 py-2.5">
+    <article className="border-b border-line px-3 py-2.5">
       <button type="button" onClick={onSelect} className="w-full text-left">
         <div className="flex items-center justify-between gap-2">
-          <span className="tnum font-mono text-sm font-semibold text-ground-50">{incident.code}</span>
+          <span className="tnum font-mono text-sm font-semibold text-ink-900">{incident.code}</span>
           <div className="flex items-center gap-1.5">
             <Badge className={severity.chip}>{severity.label}</Badge>
-            <Badge className="border-ground-600 bg-ground-800 text-ground-300">{incident.status}</Badge>
+            <Badge className="border-line bg-surface-sunken text-ink-600">{incident.status}</Badge>
           </div>
         </div>
-        <p className="mt-0.5 text-xs text-ground-200">{incident.address}</p>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-ground-400">{incident.description}</p>
+        <p className="mt-0.5 text-xs text-ink-700">{incident.address}</p>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-ink-500">{incident.description}</p>
       </button>
 
       <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -269,7 +269,7 @@ function IncidentRow({
           value={chosen}
           onChange={(event) => setChosen(event.target.value)}
           aria-label={`Assign a ${unitNoun.toLowerCase()}`}
-          className="h-7 rounded-[3px] border border-ground-600 bg-ground-850 px-2 text-[11px] text-ground-100 outline-none focus:border-accent-500"
+          className="h-7 rounded-lg border border-line bg-surface-muted px-2 text-[11px] text-ink-800 outline-none focus:border-brand-500"
         >
           <option value="">Assign {unitNoun.toLowerCase()}…</option>
           {available.map(({ vehicle }) => (
@@ -337,21 +337,21 @@ function IncidentForm({
   };
 
   return (
-    <form onSubmit={submit} className="space-y-2 border-b border-ground-700 bg-ground-850 px-3 py-2.5">
+    <form onSubmit={submit} className="space-y-2 border-b border-line bg-surface-muted px-3 py-2.5">
       <div className="grid grid-cols-2 gap-2">
         <label className="col-span-2 block">
-          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-ground-400">Address</span>
+          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-ink-500">Address</span>
           <input
             required
             value={address}
             onChange={(event) => setAddress(event.target.value)}
             placeholder="Commercial building, MG Road"
-            className="h-8 w-full rounded-[3px] border border-ground-600 bg-ground-900 px-2 text-xs text-ground-100 outline-none focus:border-accent-500"
+            className="h-8 w-full rounded-lg border border-line bg-surface px-2 text-xs text-ink-800 outline-none focus:border-brand-500"
           />
         </label>
 
         <label className="col-span-2 block">
-          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-ground-400">
+          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-ink-500">
             Description
           </span>
           <textarea
@@ -359,26 +359,26 @@ function IncidentForm({
             rows={2}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            className="w-full resize-none rounded-[3px] border border-ground-600 bg-ground-900 px-2 py-1.5 text-xs text-ground-100 outline-none focus:border-accent-500"
+            className="w-full resize-none rounded-lg border border-line bg-surface px-2 py-1.5 text-xs text-ink-800 outline-none focus:border-brand-500"
           />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-ground-400">Latitude</span>
+          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-ink-500">Latitude</span>
           <input
             required
             value={lat}
             onChange={(event) => setLat(event.target.value)}
-            className="tnum h-8 w-full rounded-[3px] border border-ground-600 bg-ground-900 px-2 font-mono text-xs text-ground-100 outline-none focus:border-accent-500"
+            className="tnum h-8 w-full rounded-lg border border-line bg-surface px-2 font-mono text-xs text-ink-800 outline-none focus:border-brand-500"
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-ground-400">Longitude</span>
+          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-ink-500">Longitude</span>
           <input
             required
             value={lng}
             onChange={(event) => setLng(event.target.value)}
-            className="tnum h-8 w-full rounded-[3px] border border-ground-600 bg-ground-900 px-2 font-mono text-xs text-ground-100 outline-none focus:border-accent-500"
+            className="tnum h-8 w-full rounded-lg border border-line bg-surface px-2 font-mono text-xs text-ink-800 outline-none focus:border-brand-500"
           />
         </label>
       </div>
@@ -392,8 +392,8 @@ function IncidentForm({
               key={option}
               type="button"
               onClick={() => setSeverity(option)}
-              className={`h-7 flex-1 rounded-[3px] border text-[11px] font-medium ${
-                active ? 'border-2' : 'border-ground-600 bg-ground-900 text-ground-300'
+              className={`h-7 flex-1 rounded-lg border text-[11px] font-medium ${
+                active ? 'border-2' : 'border-line bg-surface text-ink-600'
               }`}
               style={active ? { borderColor: style.hex, color: style.hex, backgroundColor: `${style.hex}18` } : undefined}
             >

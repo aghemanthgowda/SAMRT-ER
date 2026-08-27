@@ -33,8 +33,8 @@ export function JunctionNetwork() {
             type="button"
             onClick={() => select({ kind: 'junction', id: junction.id })}
             title={`${junction.code} — ${junction.name} (${style.label})`}
-            className={`rounded-[3px] border px-1.5 py-1 text-left transition-colors ${
-              selected ? 'border-accent-500 bg-ground-800' : 'border-ground-700 bg-ground-850 hover:bg-ground-800'
+            className={`rounded-lg border px-1.5 py-1 text-left transition-colors ${
+              selected ? 'border-brand-500 bg-surface-sunken' : 'border-line bg-surface-muted hover:bg-surface-muted'
             }`}
           >
             <div className="flex items-center gap-1">
@@ -43,13 +43,13 @@ export function JunctionNetwork() {
                 style={{ backgroundColor: style.hex, boxShadow: held ? `0 0 0 2px ${style.hex}40` : undefined }}
                 aria-hidden
               />
-              <span className="tnum font-mono text-[11px] font-semibold text-ground-100">{junction.code}</span>
+              <span className="tnum font-mono text-[11px] font-semibold text-ink-800">{junction.code}</span>
             </div>
             <p className="truncate text-[9px] uppercase tracking-wide" style={{ color: style.hex }}>
               {style.label}
             </p>
             {runtime?.heldForVehicleId && (
-              <p className="tnum truncate font-mono text-[9px] text-ground-400">{runtime.heldForVehicleId}</p>
+              <p className="tnum truncate font-mono text-[9px] text-ink-500">{runtime.heldForVehicleId}</p>
             )}
           </button>
         );

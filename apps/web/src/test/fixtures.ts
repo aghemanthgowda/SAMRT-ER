@@ -15,6 +15,7 @@ import {
   DestinationKind,
   DeviceStatus,
   JunctionState,
+  Provisioning,
   RequestStatus,
   ResolutionStrategy,
   RouteChoiceReason,
@@ -34,6 +35,7 @@ export const junction = (id: string, code = id): Junction => ({
   name: `${code} junction`,
   position: { lat: 12.9746, lng: 77.6094 },
   hardwareDeviceId: `HW-${id}`,
+  provisioning: Provisioning.SIMULATED,
   clearanceSeconds: 6,
   averageThroughputVph: 4000,
   approaches: [
@@ -52,6 +54,7 @@ export const vehicle = (id: string, kind: VehicleKind = VehicleKind.AMBULANCE): 
   baseFacilityId: 'FAC-HOSP-01',
   standbyPosition: { lat: 12.9722, lng: 77.6167 },
   cruisingSpeedKph: 50,
+  provisioning: Provisioning.SIMULATED,
   active: true,
 });
 

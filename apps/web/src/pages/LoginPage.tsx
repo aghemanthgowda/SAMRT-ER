@@ -1,23 +1,20 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Radio, ShieldCheck } from 'lucide-react';
-import { api } from '@/api/client';
-import { Button } from '@/components/ui/primitives';
+import { useState, type FormEvent } from 'react';
+import { Eye, EyeOff, Radio, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
-
-interface DemoAccount {
-  email: string;
-  role: string;
-  displayName: string;
-  facility?: string;
-  vehicles?: string[];
-}
 
 /**
  * Sign-in.
  *
- * Role is never chosen here. A driver does not become a driver by picking
- * "ambulance driver" from a list — authority comes from the account, and from
- * the verified chain behind it. The screen only takes credentials.
+ * Credentials only. The screen shows no accounts, no password hints and no
+ * role picker — it cannot, because the API has no endpoint that would supply
+ * them. Two consequences of that are deliberate:
+ *
+ *   - Role is never chosen here. A driver does not become a driver by picking
+ *     "ambulance driver" from a list; authority comes from the account record
+ *     and from the verified vehicle chain behind it, both resolved server-side.
+ *   - A failed sign-in never says whether the address exists. The server
+ *     returns one message for both cases, so this form cannot be used to
+ *     enumerate which emergency accounts are real.
  */
 export function LoginPage() {
   const login = useAuthStore((state) => state.login);
@@ -27,15 +24,7 @@ export function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [demo, setDemo] = useState<{ password: string; accounts: DemoAccount[] } | undefined>();
-
-  useEffect(() => {
-    // Present only outside production; a 404 here is expected and harmless.
-    void api
-      .demoAccounts()
-      .then(setDemo)
-      .catch(() => undefined);
-  }, []);
+  const [showPassword, setShowPassword] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -47,119 +36,100 @@ export function LoginPage() {
     }
   };
 
-  const fillFromAccount = (account: DemoAccount) => {
-    setEmail(account.email);
-    setPassword(demo?.password ?? '');
-  };
+  const busy = status === 'authenticating';
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-ground-950 px-4 py-8">
-      <div className="w-full max-w-5xl">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-          {/* Sign-in */}
-          <div className="panel">
-            <div className="border-b border-ground-700 px-5 py-4">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-8 items-center justify-center rounded-[3px] bg-accent-500">
-                  <Radio className="size-4 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-base font-semibold tracking-tight text-ground-50">SMART-ER</h1>
-                  <p className="text-[11px] text-ground-400">Emergency Traffic System</p>
-                </div>
-              </div>
+    <div className="flex min-h-full items-center justify-center bg-canvas px-4 py-10">
+      <div className="w-full max-w-[380px]">
+        {/* Identity */}
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="flex size-12 items-center justify-center rounded-xl bg-brand-600 shadow-sm">
+            <Radio className="size-6 text-white" />
+          </div>
+          <h1 className="mt-3 text-xl font-semibold tracking-tight text-ink-900">SMART-ER</h1>
+          <p className="text-[13px] text-ink-500">Emergency Traffic System</p>
+        </div>
+
+        <div className="rounded-xl border border-line bg-surface p-6 shadow-card">
+          <form onSubmit={submit} className="space-y-4" noValidate>
+            <div>
+              <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-ink-700">
+                Email or employee ID
+              </label>
+              <input
+                id="email"
+                name="username"
+                type="text"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={busy}
+                className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:opacity-60"
+              />
             </div>
 
-            <form onSubmit={submit} className="space-y-3 px-5 py-4">
-              <div>
-                <label htmlFor="email" className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-ground-400">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="username"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="h-9 w-full rounded-[3px] border border-ground-600 bg-ground-850 px-2.5 text-sm text-ground-100 outline-none placeholder:text-ground-500 focus:border-accent-500"
-                  placeholder="controller@smart-er.example"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-ground-400">
-                  Password
-                </label>
+            <div>
+              <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-ink-700">
+                Password
+              </label>
+              <div className="relative">
                 <input
                   id="password"
-                  type="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="h-9 w-full rounded-[3px] border border-ground-600 bg-ground-850 px-2.5 text-sm text-ground-100 outline-none focus:border-accent-500"
+                  disabled={busy}
+                  className="h-10 w-full rounded-lg border border-line bg-surface px-3 pr-10 text-sm text-ink-900 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:opacity-60"
                 />
-              </div>
-
-              {error && (
-                <p role="alert" className="rounded-[3px] border border-status-critical/40 bg-status-critical-dim px-2.5 py-1.5 text-[11px] text-status-critical">
-                  {error}
-                </p>
-              )}
-
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                className="w-full"
-                disabled={status === 'authenticating'}
-              >
-                {status === 'authenticating' ? 'Signing in…' : 'Sign in'}
-              </Button>
-
-              <p className="flex items-start gap-1.5 pt-1 text-[11px] leading-relaxed text-ground-500">
-                <ShieldCheck className="mt-0.5 size-3.5 shrink-0" />
-                Emergency privileges are granted by your account and the verified vehicle assigned to it, never by
-                selecting a role.
-              </p>
-            </form>
-          </div>
-
-          {/* Demonstration accounts */}
-          {demo && demo.accounts.length > 0 && (
-            <div className="panel">
-              <div className="panel-header">
-                <h2 className="panel-title">Demonstration accounts</h2>
-                <span className="tnum font-mono text-[11px] text-ground-400">password: {demo.password}</span>
-              </div>
-              <div className="panel-body">
-                <div className="grid gap-px bg-ground-800 sm:grid-cols-2">
-                  {demo.accounts.map((account) => (
-                    <button
-                      key={account.email}
-                      type="button"
-                      onClick={() => fillFromAccount(account)}
-                      className="bg-ground-900 px-3 py-2.5 text-left transition-colors hover:bg-ground-850"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-xs font-medium text-ground-100">{account.displayName}</span>
-                        <span className="shrink-0 rounded-[3px] border border-ground-600 bg-ground-800 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-ground-300">
-                          {account.role.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <p className="truncate text-[11px] text-ground-400">{account.email}</p>
-                      {account.facility && <p className="truncate text-[10px] text-ground-500">{account.facility}</p>}
-                      {account.vehicles && account.vehicles.length > 0 && (
-                        <p className="tnum font-mono text-[10px] text-ground-500">{account.vehicles.join(', ')}</p>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-ink-400 transition-colors hover:text-ink-600"
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
               </div>
             </div>
-          )}
+
+            {error && (
+              <p
+                role="alert"
+                className="rounded-lg border border-critical-200 bg-critical-50 px-3 py-2 text-[13px] text-critical-700"
+              >
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={busy}
+              className="h-10 w-full rounded-lg bg-brand-600 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy ? 'Signing in…' : 'Sign in'}
+            </button>
+
+            <div className="text-center">
+              <a href="mailto:support@smart-er.example" className="text-[13px] text-brand-600 hover:underline">
+                Forgot password?
+              </a>
+            </div>
+          </form>
         </div>
+
+        <p className="mt-5 flex items-start justify-center gap-1.5 px-2 text-center text-[11px] leading-relaxed text-ink-400">
+          <ShieldCheck className="mt-px size-3.5 shrink-0" />
+          <span>
+            Emergency privileges are granted by your account and the verified vehicle assigned to it. Access is
+            logged.
+          </span>
+        </p>
       </div>
     </div>
   );

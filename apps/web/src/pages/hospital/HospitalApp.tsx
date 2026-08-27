@@ -70,12 +70,12 @@ export function HospitalApp() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-ground-950">
+    <div className="flex h-full flex-col bg-canvas">
       <TopBar subtitle={facility?.name ?? 'Hospital emergency desk'}>
         <div className="hidden items-center gap-2 lg:flex">
-          <Ambulance className="size-3.5 text-status-critical" />
-          <span className="text-[10px] uppercase tracking-wider text-ground-500">Inbound</span>
-          <span className="tnum font-mono text-xs font-semibold text-ground-100">{inbound.length}</span>
+          <Ambulance className="size-3.5 text-critical-600" />
+          <span className="text-[10px] uppercase tracking-wider text-ink-9000">Inbound</span>
+          <span className="tnum font-mono text-xs font-semibold text-ink-800">{inbound.length}</span>
         </div>
       </TopBar>
 
@@ -101,25 +101,25 @@ export function HospitalApp() {
                   return (
                     <article
                       key={request.id}
-                      className={`border-b border-ground-800 px-3 py-2.5 ${
-                        request.severity === 'CRITICAL' ? 'border-l-2 border-l-status-critical' : ''
+                      className={`border-b border-line px-3 py-2.5 ${
+                        request.severity === 'CRITICAL' ? 'border-l-2 border-l-critical-500' : ''
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="tnum font-mono text-sm font-semibold text-ground-50">
+                            <span className="tnum font-mono text-sm font-semibold text-ink-900">
                               {request.vehicleId}
                             </span>
                             <Badge className={severity.chip}>{severity.label}</Badge>
                             {statusStyle && <Badge className={statusStyle.chip}>{statusStyle.label}</Badge>}
                             {request.status === RequestStatus.PENDING && (
-                              <Badge className="border-ground-600 bg-ground-800 text-ground-300">
+                              <Badge className="border-line bg-surface-sunken text-ink-600">
                                 Awaiting approval
                               </Badge>
                             )}
                             {state && !state.gpsOk && (
-                              <span className="flex items-center gap-1 text-[10px] text-violet-400">
+                              <span className="flex items-center gap-1 text-[10px] text-violet-500">
                                 <SatelliteDish className="size-3" />
                                 GPS lost
                               </span>
@@ -127,7 +127,7 @@ export function HospitalApp() {
                           </div>
 
                           {request.note && (
-                            <p className="mt-1 text-xs italic leading-relaxed text-ground-300">{request.note}</p>
+                            <p className="mt-1 text-xs italic leading-relaxed text-ink-600">{request.note}</p>
                           )}
 
                           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -183,16 +183,16 @@ export function HospitalApp() {
                 {arrived.map((request) => (
                   <li
                     key={request.id}
-                    className="flex items-center justify-between gap-2 border-b border-ground-800 px-3 py-2 last:border-b-0"
+                    className="flex items-center justify-between gap-2 border-b border-line px-3 py-2 last:border-b-0"
                   >
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="size-3.5 text-status-ok" />
-                      <span className="tnum font-mono text-xs text-ground-100">{request.vehicleId}</span>
+                      <CheckCircle2 className="size-3.5 text-ok-600" />
+                      <span className="tnum font-mono text-xs text-ink-800">{request.vehicleId}</span>
                       <Badge className={SEVERITY_STYLE[request.severity].chip}>
                         {SEVERITY_STYLE[request.severity].label}
                       </Badge>
                     </div>
-                    <time className="tnum font-mono text-[11px] text-ground-400">
+                    <time className="tnum font-mono text-[11px] text-ink-500">
                       {request.completedAt ? formatClock(request.completedAt) : '—'}
                     </time>
                   </li>
@@ -213,19 +213,19 @@ export function HospitalApp() {
         </div>
       </div>
 
-      <footer className="flex shrink-0 items-center gap-4 border-t border-ground-700 bg-ground-900 px-3 py-1.5">
-        <span className="flex items-center gap-1.5 text-[11px] text-ground-400">
+      <footer className="flex shrink-0 items-center gap-4 border-t border-line bg-surface px-3 py-1.5">
+        <span className="flex items-center gap-1.5 text-[11px] text-ink-500">
           <MapPin className="size-3" />
           {facility?.address ?? '—'}
         </span>
         {facility?.capacity !== undefined && (
-          <span className="flex items-center gap-1.5 text-[11px] text-ground-400">
+          <span className="flex items-center gap-1.5 text-[11px] text-ink-500">
             <Clock className="size-3" />
             {facility.capacity} emergency bays
           </span>
         )}
         {facility?.specialities && (
-          <span className="hidden text-[11px] text-ground-500 sm:inline">{facility.specialities.join(' · ')}</span>
+          <span className="hidden text-[11px] text-ink-9000 sm:inline">{facility.specialities.join(' · ')}</span>
         )}
       </footer>
     </div>

@@ -100,13 +100,13 @@ export class SmartErOverlay {
         existing.line.setOptions({ strokeColor: color, strokeWeight: selected ? 5 : 3.5, zIndex: selected ? 30 : 20 });
         existing.casing.setOptions({ strokeWeight: selected ? 9 : 7 });
       } else {
-        // A dark casing beneath the coloured line keeps routes legible where
-        // they cross a light road or each other.
+        // A white casing beneath the coloured line keeps routes legible where
+        // they cross a road of a similar colour, or each other.
         const casing = new google.maps.Polyline({
           path,
           map: this.map,
-          strokeColor: '#0b1017',
-          strokeOpacity: 0.85,
+          strokeColor: '#ffffff',
+          strokeOpacity: 0.95,
           strokeWeight: selected ? 9 : 7,
           zIndex: 10,
           clickable: false,
@@ -165,7 +165,7 @@ export class SmartErOverlay {
         clickable: false,
         icons: [
           {
-            icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.55, strokeWeight: 2, scale: 3, strokeColor: '#93a6bb' },
+            icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.55, strokeWeight: 2, scale: 3, strokeColor: '#98a2b3' },
             offset: '0',
             repeat: '11px',
           },
@@ -393,8 +393,8 @@ export class SmartErOverlay {
  */
 function corridorRingColor(corridor: Corridor | undefined, state: VehicleState): string {
   if (!state.gpsOk) return JUNCTION_STATE_STYLE[JunctionState.OFFLINE].hex;
-  if (!corridor) return '#4d6076';
+  if (!corridor) return '#667085';
   if (corridor.activeJunctionId) return JUNCTION_STATE_STYLE[JunctionState.GREEN].hex;
   if (corridor.preparingJunctionIds.length > 0) return JUNCTION_STATE_STYLE[JunctionState.PREPARING].hex;
-  return '#4d6076';
+  return '#667085';
 }

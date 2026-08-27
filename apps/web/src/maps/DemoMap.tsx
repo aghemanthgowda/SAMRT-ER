@@ -83,11 +83,18 @@ export function DemoMap(props: DemoMapProps) {
   const junctionById = useMemo(() => new Map(junctions.map((j) => [j.id, j])), [junctions]);
 
   return (
-    <div className="relative size-full bg-ground-950">
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center">
-        <div className="mt-2 rounded-[3px] border border-status-high/40 bg-status-high-dim px-3 py-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-status-high">
-            Demo map — no Google Maps API key configured
+    <div className="relative size-full bg-canvas">
+      {/*
+        Stated once, quietly, and only here. The operator needs to know the
+        geography is schematic — but this is a working fallback, not a fault,
+        and an alarm-coloured banner across the top of the primary display
+        would train people to ignore banners.
+      */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center">
+        <div className="mt-3 flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-3 py-1 shadow-card">
+          <span className="size-1.5 rounded-full bg-warn-500" aria-hidden />
+          <p className="text-[11.5px] font-medium text-ink-600">
+            Schematic map — add a Google Maps API key for real geography
           </p>
         </div>
       </div>
@@ -101,10 +108,10 @@ export function DemoMap(props: DemoMapProps) {
       >
         <defs>
           <pattern id="demo-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M40 0H0V40" fill="none" stroke="#182430" strokeWidth="1" />
+            <path d="M40 0H0V40" fill="none" stroke="#e6eaf1" strokeWidth="1" />
           </pattern>
         </defs>
-        <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill="#0d141c" />
+        <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill="#f4f6f9" />
         <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill="url(#demo-grid)" />
 
         {/* Road network, coloured by live traffic. */}
@@ -126,11 +133,11 @@ export function DemoMap(props: DemoMapProps) {
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                stroke={segment.blocked ? '#5b2126' : (style?.hex ?? '#26333f')}
+                stroke={segment.blocked ? '#9f1239' : (style?.hex ?? '#cdd5e0')}
                 strokeWidth={segment.blocked ? 3 : 5}
                 strokeLinecap="round"
                 strokeDasharray={segment.blocked ? '6 5' : undefined}
-                opacity={0.55}
+                opacity={0.5}
               />
             );
           })}
@@ -152,7 +159,7 @@ export function DemoMap(props: DemoMapProps) {
             });
             return (
               <g key={route.id}>
-                <polyline points={points.join(' ')} fill="none" stroke="#0b1017" strokeWidth={selected ? 9 : 7} strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points={points.join(' ')} fill="none" stroke="#ffffff" strokeWidth={selected ? 9 : 7} strokeLinecap="round" strokeLinejoin="round" />
                 <polyline
                   points={points.join(' ')}
                   fill="none"
@@ -186,8 +193,8 @@ export function DemoMap(props: DemoMapProps) {
                 height={14}
                 rx={3}
                 fill={palette[facility.kind] ?? '#7c8da3'}
-                stroke="#0f1720"
-                strokeWidth={1.5}
+                stroke="#ffffff"
+                strokeWidth={2}
                 className="cursor-pointer"
                 onClick={() => props.onSelect({ kind: 'facility', id: facility.id })}
               >
@@ -208,8 +215,8 @@ export function DemoMap(props: DemoMapProps) {
                   key={incident.id}
                   points={`${p.x},${p.y - 8} ${p.x + 8},${p.y + 6} ${p.x - 8},${p.y + 6}`}
                   fill="#f5a524"
-                  stroke="#0f1720"
-                  strokeWidth={1.4}
+                  stroke="#ffffff"
+                  strokeWidth={2}
                   className="cursor-pointer"
                   onClick={() => props.onSelect({ kind: 'incident', id: incident.id })}
                 >
@@ -235,7 +242,7 @@ export function DemoMap(props: DemoMapProps) {
               >
                 <title>{`${junction.code} — ${junction.name} (${style.label})`}</title>
                 {held && <circle cx={p.x} cy={p.y} r={15} fill="none" stroke={style.hex} strokeWidth={2} opacity={0.5} />}
-                <circle cx={p.x} cy={p.y} r={held ? 12 : 9} fill="#0f1720" stroke={style.hex} strokeWidth={2} />
+                <circle cx={p.x} cy={p.y} r={held ? 12 : 9} fill="#ffffff" stroke={style.hex} strokeWidth={2.5} />
                 <text
                   x={p.x}
                   y={p.y + 3.5}
@@ -270,7 +277,7 @@ export function DemoMap(props: DemoMapProps) {
                 onClick={() => props.onSelect({ kind: 'vehicle', id: state.vehicleId })}
               >
                 <title>{`${vehicle.callSign} — ${state.status}`}</title>
-                <circle cx={p.x} cy={p.y} r={selected ? 13 : 11} fill={state.gpsOk ? '#0f1720' : '#8b5cf6'} stroke={color} strokeWidth={2.5} />
+                <circle cx={p.x} cy={p.y} r={selected ? 13 : 11} fill={state.gpsOk ? '#ffffff' : '#ede9fe'} stroke={color} strokeWidth={2.5} />
                 <circle cx={p.x} cy={p.y} r={5} fill={color} />
                 <text x={p.x} y={p.y - 16} textAnchor="middle" fontSize={9.5} fontWeight={700} fill={color} className="select-none">
                   {vehicle.callSign}

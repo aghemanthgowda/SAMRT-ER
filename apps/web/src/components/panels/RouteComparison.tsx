@@ -24,23 +24,23 @@ export function RouteComparison({ route }: { route: Route }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-ground-400">Route selection</h4>
-        <Badge className="border-ground-600 bg-ground-800 text-ground-300">
+        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">Route selection</h4>
+        <Badge className="border-line bg-surface-sunken text-ink-600">
           {sourceLabel[route.source] ?? route.source}
         </Badge>
       </div>
 
       {/* Selected */}
-      <div className="rounded-[3px] border border-status-ok/40 bg-status-ok-dim px-2 py-1.5">
+      <div className="rounded-lg border border-ok-200 bg-ok-50 px-2 py-1.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-status-ok">Selected</span>
-          <span className="tnum font-mono text-[11px] text-ground-100">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-ok-600">Selected</span>
+          <span className="tnum font-mono text-[11px] text-ink-800">
             {formatDistance(route.distanceM)} · {formatEta(route.etaSeconds)}
           </span>
         </div>
-        <p className="tnum mt-0.5 font-mono text-[10px] text-ground-300">{route.junctionIds.join(' → ')}</p>
+        <p className="tnum mt-0.5 font-mono text-[10px] text-ink-600">{route.junctionIds.join(' → ')}</p>
         {chosen && chosen.conflictingJunctionIds.length > 0 && (
-          <p className="mt-0.5 text-[10px] text-status-high">
+          <p className="mt-0.5 text-[10px] text-warn-600">
             Contends for {chosen.conflictingJunctionIds.join(', ')}
           </p>
         )}
@@ -53,34 +53,34 @@ export function RouteComparison({ route }: { route: Route }) {
         const shorterButSlower = deltaDistance < 0 && deltaEta > 0;
 
         return (
-          <div key={candidate.id} className="rounded-[3px] border border-ground-700 bg-ground-850 px-2 py-1.5">
+          <div key={candidate.id} className="rounded-lg border border-line bg-surface-muted px-2 py-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-ground-400">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-ink-500">
                 {candidate.label}
               </span>
-              <span className="tnum font-mono text-[11px] text-ground-300">
+              <span className="tnum font-mono text-[11px] text-ink-600">
                 {formatDistance(candidate.distanceM)} · {formatEta(candidate.etaSeconds)}
               </span>
             </div>
             {candidate.junctionIds.length > 0 && (
-              <p className="tnum mt-0.5 font-mono text-[10px] text-ground-500">{candidate.junctionIds.join(' → ')}</p>
+              <p className="tnum mt-0.5 font-mono text-[10px] text-ink-9000">{candidate.junctionIds.join(' → ')}</p>
             )}
             <p className="mt-0.5 text-[10px]">
-              <span className={deltaEta > 0 ? 'text-status-high' : 'text-status-ok'}>
+              <span className={deltaEta > 0 ? 'text-warn-600' : 'text-ok-600'}>
                 {deltaEta >= 0 ? '+' : ''}
                 {Math.round(deltaEta)} s
               </span>
-              <span className="text-ground-500">
+              <span className="text-ink-9000">
                 {' · '}
                 {deltaDistance >= 0 ? '+' : ''}
                 {formatDistance(Math.abs(deltaDistance))}
                 {deltaDistance < 0 ? ' shorter' : ' longer'}
               </span>
               {shorterButSlower && (
-                <span className="ml-1 text-ground-400">— shorter but slower; response time is the objective</span>
+                <span className="ml-1 text-ink-500">— shorter but slower; response time is the objective</span>
               )}
               {candidate.conflictingJunctionIds.length > 0 && (
-                <span className="ml-1 text-status-critical">
+                <span className="ml-1 text-critical-600">
                   · contends for {candidate.conflictingJunctionIds.join(', ')}
                 </span>
               )}
@@ -90,9 +90,9 @@ export function RouteComparison({ route }: { route: Route }) {
       })}
 
       {/* The reasoning, verbatim from the routing service. */}
-      <div className="rounded-[3px] border border-ground-700 bg-ground-900 px-2 py-1.5">
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-ground-400">Why this route</p>
-        <p className="text-[11px] leading-relaxed text-ground-200">{route.explanation}</p>
+      <div className="rounded-lg border border-line bg-surface px-2 py-1.5">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-500">Why this route</p>
+        <p className="text-[11px] leading-relaxed text-ink-700">{route.explanation}</p>
       </div>
     </div>
   );

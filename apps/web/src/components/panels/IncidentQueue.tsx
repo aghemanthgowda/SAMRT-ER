@@ -47,11 +47,11 @@ export function IncidentQueue() {
               <Icon className="mt-0.5 size-3.5 shrink-0" style={{ color: severity.hex }} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="tnum font-mono text-[11px] font-semibold text-ground-50">{incident.code}</span>
+                  <span className="tnum font-mono text-[11px] font-semibold text-ink-900">{incident.code}</span>
                   <Badge className={severity.chip}>{severity.label}</Badge>
                 </div>
-                <p className="truncate text-[11px] text-ground-300">{incident.address}</p>
-                <p className="tnum font-mono text-[10px] text-ground-500">
+                <p className="truncate text-[11px] text-ink-600">{incident.address}</p>
+                <p className="tnum font-mono text-[10px] text-ink-9000">
                   {formatClock(incident.reportedAt)} · {STATUS_LABEL[incident.status]}
                   {incident.assignedVehicleIds.length > 0 && ` · ${incident.assignedVehicleIds.join(', ')}`}
                 </p>

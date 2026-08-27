@@ -27,14 +27,14 @@ export function HardwareStatus() {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 border-b border-ground-800 px-2.5 py-1.5">
-        <span className="flex items-center gap-1.5 text-[11px] text-ground-300">
-          <Cpu className="size-3 text-ground-400" />
+      <div className="flex items-center justify-between gap-2 border-b border-line px-2.5 py-1.5">
+        <span className="flex items-center gap-1.5 text-[11px] text-ink-600">
+          <Cpu className="size-3 text-ink-500" />
           {list.length} devices
         </span>
         <div className="flex items-center gap-1.5">
           {simulated > 0 && (
-            <Badge className="border-accent-500/40 bg-accent-500/15 text-accent-400">
+            <Badge className="border-brand-200 bg-brand-50 text-brand-600">
               {simulated === list.length ? 'All simulated' : `${simulated} simulated`}
             </Badge>
           )}
@@ -71,7 +71,7 @@ function DeviceGroup({
 
   return (
     <section>
-      <h3 className="border-b border-ground-800 bg-ground-850/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ground-400">
+      <h3 className="border-b border-line bg-surface-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink-500">
         {title}
       </h3>
       <ul>
@@ -80,23 +80,23 @@ function DeviceGroup({
           return (
             <li
               key={device.id}
-              className="flex items-center justify-between gap-2 border-b border-ground-800 px-2.5 py-1"
+              className="flex items-center justify-between gap-2 border-b border-line px-2.5 py-1"
             >
               <div className="flex min-w-0 items-center gap-1.5">
                 <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: style.hex }} aria-hidden />
-                <span className="tnum truncate font-mono text-[11px] text-ground-100">{device.serial}</span>
-                <span className="truncate text-[10px] text-ground-500">{detail(device)}</span>
+                <span className="tnum truncate font-mono text-[11px] text-ink-800">{device.serial}</span>
+                <span className="truncate text-[10px] text-ink-9000">{detail(device)}</span>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 {device.lastLatencyMs !== undefined && (
-                  <span className="tnum font-mono text-[10px] text-ground-500" title="Last acknowledgement latency">
+                  <span className="tnum font-mono text-[10px] text-ink-9000" title="Last acknowledgement latency">
                     {device.lastLatencyMs}ms
                   </span>
                 )}
                 {device.mode === HardwareMode.SIMULATED ? (
-                  <Radio className="size-3 text-accent-400" aria-label="Simulated device" />
+                  <Radio className="size-3 text-brand-600" aria-label="Simulated device" />
                 ) : (
-                  <Cpu className="size-3 text-status-ok" aria-label="Physical device" />
+                  <Cpu className="size-3 text-ok-600" aria-label="Physical device" />
                 )}
               </div>
             </li>

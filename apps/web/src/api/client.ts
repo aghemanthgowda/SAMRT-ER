@@ -14,7 +14,9 @@ import type {
   Organization,
   PublicTrafficImpact,
   RoadSegment,
+  ResponseSample,
   Route,
+  ServiceStatus,
   Severity,
   SimulationScenario,
   SimulationState,
@@ -49,6 +51,19 @@ export function getAuthToken(): string | undefined {
   return authToken;
 }
 
+/**
+ * Thrown when a request is cancelled — a component unmounting, or the operator
+ * navigating away mid-flight. Callers should ignore it: nothing went wrong, the
+ * answer simply stopped being needed. Reporting it as a failure would flash an
+ * error banner every time someone clicks a nav item quickly.
+ */
+export class RequestAbortedError extends Error {
+  constructor() {
+    super('Request cancelled.');
+    this.name = 'RequestAbortedError';
+  }
+}
+
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set('accept', 'application/json');
@@ -58,9 +73,10 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${BASE_URL}/api${path}`, { ...init, headers });
-  } catch {
-    // A failed fetch is almost always the API being unreachable, and saying so
-    // is far more useful to an operator than "Failed to fetch".
+  } catch (networkError) {
+    if ((networkError as Error)?.name === 'AbortError') throw new RequestAbortedError();
+    // Any other failed fetch is almost always the API being unreachable, and
+    // saying so is far more useful to an operator than "Failed to fetch".
     throw new ApiError('Cannot reach the SMART-ER server. Check that it is running.', 0);
   }
 
@@ -85,7 +101,7 @@ function safeParse(text: string): unknown {
   }
 }
 
-const get = <T>(path: string) => call<T>(path);
+const get = <T>(path: string, signal?: AbortSignal) => call<T>(path, signal ? { signal } : {});
 const post = <T>(path: string, body?: unknown) =>
   call<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });
 
@@ -128,6 +144,25 @@ export interface JunctionDetail {
   recentCommands: { id: string; aspect: string; issuedAt: string; safetyApproved: boolean; safetyNotes: string[] }[];
 }
 
+export interface DashboardHeadline {
+  activeEmergencies: number;
+  activeCorridors: number;
+  junctionsOnline: number;
+  junctionsTotal: number;
+  pendingRequests: number;
+  averageImprovementPercent: number;
+}
+
+export interface OperationalAlert {
+  id: string;
+  at: string;
+  kind: string;
+  severity: 'critical' | 'warning' | 'info';
+  message: string;
+  vehicleId?: string;
+  junctionId?: string;
+}
+
 export interface SubmitRequestBody {
   vehicleId: string;
   severity: Severity;
@@ -141,10 +176,6 @@ export const api = {
   // auth
   login: (email: string, password: string) => post<LoginResult>('/auth/login', { email, password }),
   me: () => get<{ user: User; driver?: Driver; vehicles: Vehicle[]; facility?: Facility }>('/auth/me'),
-  demoAccounts: () =>
-    get<{ password: string; accounts: { email: string; role: string; displayName: string; facility?: string; vehicles?: string[] }[] }>(
-      '/auth/demo-accounts',
-    ),
 
   // reference
   network: () => get<{ junctions: Junction[]; roadSegments: RoadSegment[]; junctionStates: JunctionRuntimeState[] }>('/network'),
@@ -158,6 +189,7 @@ export const api = {
   // driver
   signOn: (vehicleId: string) => post<VehicleState>('/driver/sign-on', { vehicleId }),
   signOff: (vehicleId: string) => post<VehicleState>('/driver/sign-off', { vehicleId }),
+  returnToStandby: (vehicleId: string) => post<VehicleState>('/driver/standby', { vehicleId }),
 
   // requests
   requests: (status?: string) => get<EmergencyRequest[]>(`/requests${status ? `?status=${status}` : ''}`),
@@ -207,6 +239,21 @@ export const api = {
     const suffix = params.toString();
     return get<TimelineEvent[]>(`/timeline${suffix ? `?${suffix}` : ''}`);
   },
+
+  // dashboard, analytics and health
+  dashboard: (mapsConfigured: boolean, days = 7, signal?: AbortSignal) =>
+    get<{
+      headline: DashboardHeadline;
+      systemStatus: ServiceStatus[];
+      responseHistory: ResponseSample[];
+      impact: PublicTrafficImpact;
+    }>(`/dashboard?maps=${mapsConfigured}&days=${days}`, signal),
+  responseAnalytics: (days = 7) =>
+    get<{ days: number; samples: ResponseSample[]; averageImprovementPercent: number }>(
+      `/analytics/response?days=${days}`,
+    ),
+  systemStatus: (mapsConfigured: boolean) => get<ServiceStatus[]>(`/system-status?maps=${mapsConfigured}`),
+  alerts: (limit = 20, signal?: AbortSignal) => get<OperationalAlert[]>(`/alerts?limit=${limit}`, signal),
 
   // hardware
   hardware: () =>

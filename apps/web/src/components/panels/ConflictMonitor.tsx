@@ -45,27 +45,27 @@ export function ConflictMonitor() {
           >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
-                <span className="tnum font-mono text-xs font-semibold text-ground-50">{conflict.junctionId}</span>
-                <span className="tnum font-mono text-[11px] text-ground-300">
+                <span className="tnum font-mono text-xs font-semibold text-ink-900">{conflict.junctionId}</span>
+                <span className="tnum font-mono text-[11px] text-ink-600">
                   {conflict.primaryVehicleId} / {conflict.secondaryVehicleId}
                 </span>
               </div>
               <Badge className={style.chip}>{style.label}</Badge>
             </div>
 
-            <p className="mt-1 text-[11px] leading-relaxed text-ground-300">{conflict.explanation}</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-ink-600">{conflict.explanation}</p>
 
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-              <span className="tnum font-mono text-[10px] text-ground-500">
+              <span className="tnum font-mono text-[10px] text-ink-9000">
                 headway {conflict.headwaySeconds}s · {formatClock(conflict.detectedAt)}
               </span>
               {conflict.originalEtaSeconds !== undefined && conflict.newEtaSeconds !== undefined && (
-                <span className="tnum font-mono text-[10px] text-ground-400">
+                <span className="tnum font-mono text-[10px] text-ink-500">
                   ETA {formatEta(conflict.originalEtaSeconds)} → {formatEta(conflict.newEtaSeconds)}
                 </span>
               )}
               {saved !== undefined && saved > 0 && (
-                <span className="tnum font-mono text-[10px] font-semibold text-status-ok">saved {saved}s</span>
+                <span className="tnum font-mono text-[10px] font-semibold text-ok-600">saved {saved}s</span>
               )}
             </div>
           </article>

@@ -3,72 +3,96 @@
 /*
  * SMART-ER design tokens.
  *
- * This is emergency operations software. It gets looked at for eight hours at
- * a stretch, often in a dim room, and the thing that matters is that a
- * controller can find the one red row among forty in under a second.
+ * A light enterprise console: white cards on a soft grey canvas, a dark navy
+ * sidebar, and one blue accent for interactive state. Colour is otherwise
+ * reserved almost entirely for operational status — the moment amber also
+ * means "highlighted", amber stops meaning "preparing" and the display stops
+ * being readable at a glance.
  *
- * So: a dark, low-chroma neutral ground; colour reserved almost entirely for
- * operational status; dense spacing; tabular figures everywhere a number can
- * change. No gradients, no glass, no glow, no decorative motion. Every colour
- * in the status ramp means exactly one thing and is never used for anything
- * else — the moment amber also means "highlighted", amber stops meaning
- * "preparing", and the display stops being readable at a glance.
+ * No gradients, no glass, no glow. Restraint is the point: this is software
+ * someone looks at for eight hours while making decisions that matter.
  */
 
 @theme {
-  /* Ground — cool neutral, deliberately desaturated so status colour carries. */
-  --color-ground-950: #0b1017;
-  --color-ground-900: #0f1720;
-  --color-ground-850: #141d28;
-  --color-ground-800: #1a242f;
-  --color-ground-750: #202b38;
-  --color-ground-700: #283542;
-  --color-ground-600: #37475a;
-  --color-ground-500: #4d6076;
-  --color-ground-400: #6b8098;
-  --color-ground-300: #93a6bb;
-  --color-ground-200: #bccada;
-  --color-ground-100: #dde5ee;
-  --color-ground-50: #f2f6fa;
+  /* Canvas and surfaces */
+  --color-canvas: #f4f6f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-surface-sunken: #eef2f7;
+  --color-line: #e3e8ef;
+  --color-line-strong: #cdd5e0;
+
+  /* Sidebar — dark navy, its own scale so it never borrows canvas tokens */
+  --color-navy-900: #131c2b;
+  --color-navy-850: #172133;
+  --color-navy-800: #1c2739;
+  --color-navy-700: #26334a;
+  --color-navy-600: #35455f;
+  --color-navy-400: #7d8ca5;
+  --color-navy-300: #9dabc2;
+  --color-navy-200: #c3ccdb;
+
+  /* Ink — text */
+  --color-ink-900: #101828;
+  --color-ink-800: #1d2939;
+  --color-ink-700: #344054;
+  --color-ink-600: #475467;
+  --color-ink-500: #667085;
+  --color-ink-400: #98a2b3;
+  --color-ink-300: #c3cad5;
+
+  /* Brand accent — interactive state only, never status */
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dbe7ff;
+  --color-brand-200: #bed3ff;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
 
   /* Status ramp. One meaning each. */
-  --color-status-critical: #e5484d;
-  --color-status-critical-dim: #3d1418;
-  --color-status-high: #f5a524;
-  --color-status-high-dim: #3a2708;
-  --color-status-medium: #3d8bfd;
-  --color-status-medium-dim: #0e2547;
-  --color-status-low: #7c8da3;
-  --color-status-ok: #30a46c;
-  --color-status-ok-dim: #0c2a1c;
+  --color-critical-50: #fef2f2;
+  --color-critical-100: #fee2e2;
+  --color-critical-200: #fecaca;
+  --color-critical-500: #ef4444;
+  --color-critical-600: #dc2626;
+  --color-critical-700: #b91c1c;
 
-  /* Junction states — these map to the map legend and must stay distinct. */
-  --color-junction-green: #30a46c;
-  --color-junction-preparing: #f5a524;
-  --color-junction-conflict: #e5484d;
-  --color-junction-released: #6b8098;
-  --color-junction-normal: #4d6076;
-  --color-junction-offline: #8b5cf6;
+  --color-warn-50: #fff8eb;
+  --color-warn-100: #fef0c7;
+  --color-warn-200: #fedf89;
+  --color-warn-500: #f59e0b;
+  --color-warn-600: #d97706;
+  --color-warn-700: #b45309;
 
-  /* Accent — used only for interactive affordances, never for status. */
-  --color-accent-500: #2f6feb;
-  --color-accent-400: #4c8bff;
-  --color-accent-600: #1f5bd0;
+  --color-ok-50: #ecfdf3;
+  --color-ok-100: #d1fadf;
+  --color-ok-200: #a6f4c5;
+  --color-ok-500: #12b76a;
+  --color-ok-600: #059669;
+  --color-ok-700: #047857;
 
-  --font-sans: 'Inter var', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Roboto Mono', ui-monospace, monospace;
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
 
-  --radius-panel: 4px;
-  --radius-control: 3px;
+  --color-violet-50: #f5f3ff;
+  --color-violet-100: #ede9fe;
+  --color-violet-500: #8b5cf6;
+  --color-violet-600: #7c3aed;
+
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, 'Roboto Mono', monospace;
+
+  /* One shadow, used everywhere a card sits on the canvas. */
+  --shadow-card: 0 1px 2px 0 rgb(16 24 40 / 0.05);
+  --shadow-raised: 0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
 }
 
 @layer base {
   :root {
-    color-scheme: dark;
-  }
-
-  * {
-    border-color: var(--color-ground-700);
+    color-scheme: light;
   }
 
   html,
@@ -79,16 +103,26 @@
 
   body {
     margin: 0;
-    background-color: var(--color-ground-950);
-    color: var(--color-ground-100);
+    background-color: var(--color-canvas);
+    color: var(--color-ink-800);
     font-family: var(--font-sans);
-    font-size: 13px;
-    line-height: 1.45;
+    font-size: 14px;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     /* Notch and home-indicator safety on the driver handset. */
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
       env(safe-area-inset-left);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+    letter-spacing: -0.011em;
+    color: var(--color-ink-900);
+    margin: 0;
   }
 
   /*
@@ -101,33 +135,27 @@
     font-feature-settings: 'tnum' 1;
   }
 
-  h1,
-  h2,
-  h3,
-  h4 {
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    margin: 0;
-  }
-
   ::-webkit-scrollbar {
-    width: 9px;
-    height: 9px;
+    width: 10px;
+    height: 10px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-ground-700);
-    border-radius: 5px;
+    background: var(--color-line-strong);
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: 6px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-ground-600);
+    background: var(--color-ink-400);
+    background-clip: content-box;
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent-400);
-    outline-offset: 1px;
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
   }
 
   /* Respect the operator's motion preference — nothing here is load-bearing. */
@@ -143,69 +171,111 @@
 }
 
 @layer components {
-  /* A panel is the basic unit of the console: a titled, bordered region. */
-  .panel {
-    background-color: var(--color-ground-900);
-    border: 1px solid var(--color-ground-700);
-    border-radius: var(--radius-panel);
+  /* A card is the basic unit of the dashboard. */
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    box-shadow: var(--shadow-card);
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
 
-  .panel-header {
+  .card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 7px 10px;
-    border-bottom: 1px solid var(--color-ground-700);
-    background-color: var(--color-ground-850);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-line);
     flex-shrink: 0;
   }
 
-  .panel-title {
-    font-size: 10px;
+  .card-title {
+    font-size: 14px;
     font-weight: 600;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--color-ground-300);
+    color: var(--color-ink-900);
+    letter-spacing: -0.006em;
   }
 
-  .panel-body {
+  .card-body {
     overflow-y: auto;
     min-height: 0;
     flex: 1;
   }
 
-  /* Status pill. Colour comes from a data attribute so it cannot drift. */
+  /* Status pill. Colour comes from the status map so it cannot drift. */
   .pill {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 1px 6px;
-    border-radius: var(--radius-control);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
     white-space: nowrap;
     border: 1px solid transparent;
+    line-height: 1.45;
   }
 
   .row-button {
     display: block;
     width: 100%;
     text-align: left;
-    border-bottom: 1px solid var(--color-ground-800);
-    transition: background-color 100ms ease;
+    transition: background-color 120ms ease;
   }
   .row-button:hover {
-    background-color: var(--color-ground-850);
+    background-color: var(--color-surface-muted);
   }
   .row-button[data-selected='true'] {
-    background-color: var(--color-ground-800);
-    box-shadow: inset 2px 0 0 var(--color-accent-500);
+    background-color: var(--color-brand-50);
+    box-shadow: inset 2px 0 0 var(--color-brand-600);
+  }
+
+  /*
+   * Selectable table row.
+   *
+   * Deliberately separate from .row-button: that rule sets `display: block`,
+   * which is right for a stack of list items and fatal on a <tr> — it drops the
+   * row out of the table layout and every cell after the first collapses.
+   */
+  .row-tr {
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+  .row-tr:hover {
+    background-color: var(--color-surface-muted);
+  }
+  .row-tr[data-selected='true'] {
+    background-color: var(--color-brand-50);
+    box-shadow: inset 2px 0 0 var(--color-brand-600);
+  }
+
+  /* Sidebar navigation item. */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--color-navy-300);
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+  .nav-item:hover {
+    background-color: var(--color-navy-700);
+    color: #ffffff;
+  }
+  .nav-item[aria-current='page'] {
+    background-color: var(--color-brand-600);
+    color: #ffffff;
+  }
+  .nav-item[aria-current='page']:hover {
+    background-color: var(--color-brand-600);
   }
 
   /*
@@ -215,13 +285,13 @@
   @keyframes urgent-pulse {
     0%,
     100% {
-      border-color: var(--color-status-critical);
+      border-color: var(--color-critical-500);
     }
     50% {
-      border-color: color-mix(in srgb, var(--color-status-critical) 35%, transparent);
+      border-color: var(--color-critical-200);
     }
   }
   .urgent {
-    animation: urgent-pulse 1.8s ease-in-out infinite;
+    animation: urgent-pulse 1.9s ease-in-out infinite;
   }
 }

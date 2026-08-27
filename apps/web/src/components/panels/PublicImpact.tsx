@@ -23,12 +23,12 @@ export function PublicImpact() {
     <div className="space-y-2.5 px-2.5 py-2">
       <div>
         <div className="flex items-baseline justify-between">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-ground-400">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-ink-500">
             Emergency junctions
           </span>
-          <span className="tnum font-mono text-sm font-semibold text-ground-50">
+          <span className="tnum font-mono text-sm font-semibold text-ink-900">
             {active}
-            <span className="text-ground-500"> / {total}</span>
+            <span className="text-ink-9000"> / {total}</span>
           </span>
         </div>
         <Meter value={active} max={total} color={style.hex} className="mt-1" />
@@ -36,27 +36,27 @@ export function PublicImpact() {
 
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-ground-400">Impact</p>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-ink-500">Impact</p>
           <Badge className={`${style.chip} mt-0.5`}>{style.label}</Badge>
         </div>
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-ground-400">Added delay</p>
-          <p className="tnum font-mono text-sm text-ground-50">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-ink-500">Added delay</p>
+          <p className="tnum font-mono text-sm text-ink-900">
             {impact?.estimatedAdditionalDelaySeconds ?? 0}
-            <span className="text-[11px] text-ground-400"> s</span>
+            <span className="text-[11px] text-ink-500"> s</span>
           </p>
         </div>
       </div>
 
       {impact && impact.totalVehicleSecondsLost > 0 && (
-        <p className="tnum border-t border-ground-800 pt-1.5 font-mono text-[10px] text-ground-500">
+        <p className="tnum border-t border-line pt-1.5 font-mono text-[10px] text-ink-9000">
           {impact.totalVehicleSecondsLost.toLocaleString()} vehicle-seconds ≈ {formatEta(impact.totalVehicleSecondsLost)}
           <span className="ml-1 font-sans">of aggregate public delay</span>
         </p>
       )}
 
       {impact && impact.affectedJunctionIds.length > 0 && (
-        <p className="tnum font-mono text-[10px] text-ground-400">
+        <p className="tnum font-mono text-[10px] text-ink-500">
           Holding {impact.affectedJunctionIds.join(', ')}
         </p>
       )}

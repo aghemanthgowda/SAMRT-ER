@@ -30,93 +30,93 @@ export interface StatusStyle {
 
 export const SEVERITY_STYLE: Record<Severity, StatusStyle> = {
   [Severity.CRITICAL]: {
-    chip: 'bg-status-critical-dim text-status-critical border-status-critical/40',
-    hex: '#e5484d',
+    chip: 'bg-critical-50 text-critical-700 border-critical-200',
+    hex: '#ef4444',
     label: 'Critical',
   },
   [Severity.HIGH]: {
-    chip: 'bg-status-high-dim text-status-high border-status-high/40',
-    hex: '#f5a524',
+    chip: 'bg-warn-50 text-warn-700 border-warn-200',
+    hex: '#f59e0b',
     label: 'High',
   },
   [Severity.MEDIUM]: {
-    chip: 'bg-status-medium-dim text-status-medium border-status-medium/40',
-    hex: '#3d8bfd',
+    chip: 'bg-info-50 text-info-600 border-info-200',
+    hex: '#3b82f6',
     label: 'Medium',
   },
   [Severity.LOW]: {
-    chip: 'bg-ground-800 text-ground-300 border-ground-600',
-    hex: '#7c8da3',
+    chip: 'bg-surface-sunken text-ink-600 border-line',
+    hex: '#667085',
     label: 'Low',
   },
 };
 
 export const VEHICLE_STATUS_STYLE: Record<VehicleStatus, StatusStyle> = {
-  [VehicleStatus.OFFLINE]: { chip: 'bg-ground-850 text-ground-400 border-ground-700', hex: '#6b8098', label: 'Offline' },
-  [VehicleStatus.STANDBY]: { chip: 'bg-ground-800 text-ground-200 border-ground-600', hex: '#93a6bb', label: 'Standby' },
+  [VehicleStatus.OFFLINE]: { chip: 'bg-surface-sunken text-ink-500 border-line', hex: '#98a2b3', label: 'Offline' },
+  [VehicleStatus.STANDBY]: { chip: 'bg-surface-sunken text-ink-700 border-line', hex: '#667085', label: 'Standby' },
   [VehicleStatus.REQUESTED]: {
-    chip: 'bg-status-high-dim text-status-high border-status-high/40',
-    hex: '#f5a524',
+    chip: 'bg-warn-50 text-warn-700 border-warn-200',
+    hex: '#f59e0b',
     label: 'Requested',
   },
   [VehicleStatus.ACTIVE]: {
-    chip: 'bg-status-ok-dim text-status-ok border-status-ok/40',
-    hex: '#30a46c',
+    chip: 'bg-ok-50 text-ok-700 border-ok-200',
+    hex: '#12b76a',
     label: 'Active',
   },
   [VehicleStatus.REROUTING]: {
-    chip: 'bg-status-medium-dim text-status-medium border-status-medium/40',
-    hex: '#3d8bfd',
+    chip: 'bg-info-50 text-info-600 border-info-200',
+    hex: '#3b82f6',
     label: 'Rerouting',
   },
   [VehicleStatus.ARRIVED]: {
-    chip: 'bg-status-ok-dim text-status-ok border-status-ok/40',
-    hex: '#30a46c',
+    chip: 'bg-ok-50 text-ok-700 border-ok-200',
+    hex: '#12b76a',
     label: 'Arrived',
   },
-  [VehicleStatus.COMPLETED]: { chip: 'bg-ground-800 text-ground-300 border-ground-600', hex: '#93a6bb', label: 'Completed' },
+  [VehicleStatus.COMPLETED]: { chip: 'bg-surface-sunken text-ink-600 border-line', hex: '#667085', label: 'Completed' },
 };
 
 export const REQUEST_STATUS_STYLE: Record<RequestStatus, StatusStyle> = {
   [RequestStatus.PENDING]: {
-    chip: 'bg-status-high-dim text-status-high border-status-high/40',
-    hex: '#f5a524',
+    chip: 'bg-warn-50 text-warn-700 border-warn-200',
+    hex: '#f59e0b',
     label: 'Pending',
   },
   [RequestStatus.APPROVED]: {
-    chip: 'bg-status-ok-dim text-status-ok border-status-ok/40',
-    hex: '#30a46c',
+    chip: 'bg-ok-50 text-ok-700 border-ok-200',
+    hex: '#12b76a',
     label: 'Approved',
   },
   [RequestStatus.REJECTED]: {
-    chip: 'bg-status-critical-dim text-status-critical border-status-critical/40',
-    hex: '#e5484d',
+    chip: 'bg-critical-50 text-critical-700 border-critical-200',
+    hex: '#ef4444',
     label: 'Rejected',
   },
-  [RequestStatus.CANCELLED]: { chip: 'bg-ground-800 text-ground-300 border-ground-600', hex: '#7c8da3', label: 'Cancelled' },
-  [RequestStatus.COMPLETED]: { chip: 'bg-ground-800 text-ground-200 border-ground-600', hex: '#93a6bb', label: 'Completed' },
+  [RequestStatus.CANCELLED]: { chip: 'bg-surface-sunken text-ink-600 border-line', hex: '#667085', label: 'Cancelled' },
+  [RequestStatus.COMPLETED]: { chip: 'bg-surface-sunken text-ink-700 border-line', hex: '#667085', label: 'Completed' },
 };
 
 export const JUNCTION_STATE_STYLE: Record<JunctionState, StatusStyle> = {
-  [JunctionState.NORMAL]: { chip: 'bg-ground-800 text-ground-300 border-ground-600', hex: '#4d6076', label: 'Normal' },
+  [JunctionState.NORMAL]: { chip: 'bg-surface-sunken text-ink-600 border-line', hex: '#667085', label: 'Normal' },
   [JunctionState.PREPARING]: {
-    chip: 'bg-status-high-dim text-status-high border-status-high/40',
-    hex: '#f5a524',
+    chip: 'bg-warn-50 text-warn-700 border-warn-200',
+    hex: '#f59e0b',
     label: 'Preparing',
   },
   [JunctionState.GREEN]: {
-    chip: 'bg-status-ok-dim text-status-ok border-status-ok/40',
-    hex: '#30a46c',
+    chip: 'bg-ok-50 text-ok-700 border-ok-200',
+    hex: '#12b76a',
     label: 'Green',
   },
-  [JunctionState.RELEASED]: { chip: 'bg-ground-800 text-ground-300 border-ground-600', hex: '#6b8098', label: 'Released' },
+  [JunctionState.RELEASED]: { chip: 'bg-surface-sunken text-ink-600 border-line', hex: '#3b82f6', label: 'Released' },
   [JunctionState.CONFLICT]: {
-    chip: 'bg-status-critical-dim text-status-critical border-status-critical/40',
-    hex: '#e5484d',
+    chip: 'bg-critical-50 text-critical-700 border-critical-200',
+    hex: '#ef4444',
     label: 'Conflict',
   },
   [JunctionState.OFFLINE]: {
-    chip: 'bg-violet-500/15 text-violet-300 border-violet-500/40',
+    chip: 'bg-violet-50 text-violet-600 border-violet-100',
     hex: '#8b5cf6',
     label: 'Offline',
   },
@@ -124,93 +124,102 @@ export const JUNCTION_STATE_STYLE: Record<JunctionState, StatusStyle> = {
 
 export const DEVICE_STATUS_STYLE: Record<DeviceStatus, StatusStyle> = {
   [DeviceStatus.ONLINE]: {
-    chip: 'bg-status-ok-dim text-status-ok border-status-ok/40',
-    hex: '#30a46c',
+    chip: 'bg-ok-50 text-ok-700 border-ok-200',
+    hex: '#12b76a',
     label: 'Online',
   },
   [DeviceStatus.DEGRADED]: {
-    chip: 'bg-status-high-dim text-status-high border-status-high/40',
-    hex: '#f5a524',
+    chip: 'bg-warn-50 text-warn-700 border-warn-200',
+    hex: '#f59e0b',
     label: 'Degraded',
   },
   [DeviceStatus.OFFLINE]: {
-    chip: 'bg-status-critical-dim text-status-critical border-status-critical/40',
-    hex: '#e5484d',
+    chip: 'bg-critical-50 text-critical-700 border-critical-200',
+    hex: '#ef4444',
     label: 'Offline',
   },
 };
 
+/**
+ * Traffic condition.
+ *
+ * Free-flowing and normal roads are deliberately neutral grey, not green.
+ * Colouring every healthy road green would light up the entire network and
+ * leave the one thing that matters — the active emergency corridor — with
+ * nothing to stand out against. Colour here marks the exception: congestion,
+ * and closure.
+ */
 export const TRAFFIC_STYLE: Record<TrafficLevel, StatusStyle> = {
-  [TrafficLevel.FREE_FLOW]: { chip: 'bg-status-ok-dim text-status-ok border-status-ok/40', hex: '#30a46c', label: 'Free flow' },
-  [TrafficLevel.NORMAL]: { chip: 'bg-ground-800 text-ground-200 border-ground-600', hex: '#59b37f', label: 'Normal' },
-  [TrafficLevel.SLOW]: { chip: 'bg-status-high-dim text-status-high border-status-high/40', hex: '#f5a524', label: 'Slow' },
+  [TrafficLevel.FREE_FLOW]: { chip: 'bg-ok-50 text-ok-700 border-ok-200', hex: '#cdd5e0', label: 'Free flow' },
+  [TrafficLevel.NORMAL]: { chip: 'bg-surface-sunken text-ink-700 border-line', hex: '#c3cad5', label: 'Normal' },
+  [TrafficLevel.SLOW]: { chip: 'bg-warn-50 text-warn-700 border-warn-200', hex: '#f59e0b', label: 'Slow' },
   [TrafficLevel.HEAVY]: {
-    chip: 'bg-status-critical-dim text-status-critical border-status-critical/40',
-    hex: '#e5484d',
+    chip: 'bg-critical-50 text-critical-700 border-critical-200',
+    hex: '#ef4444',
     label: 'Heavy',
   },
-  [TrafficLevel.BLOCKED]: { chip: 'bg-ground-800 text-ground-400 border-ground-600', hex: '#5b2126', label: 'Closed' },
+  [TrafficLevel.BLOCKED]: { chip: 'bg-surface-sunken text-ink-500 border-line', hex: '#9f1239', label: 'Closed' },
 };
 
 export const IMPACT_STYLE: Record<ImpactLevel, StatusStyle> = {
-  [ImpactLevel.NONE]: { chip: 'bg-ground-800 text-ground-300 border-ground-600', hex: '#6b8098', label: 'None' },
-  [ImpactLevel.LOW]: { chip: 'bg-status-ok-dim text-status-ok border-status-ok/40', hex: '#30a46c', label: 'Low' },
+  [ImpactLevel.NONE]: { chip: 'bg-surface-sunken text-ink-600 border-line', hex: '#98a2b3', label: 'None' },
+  [ImpactLevel.LOW]: { chip: 'bg-ok-50 text-ok-700 border-ok-200', hex: '#12b76a', label: 'Low' },
   [ImpactLevel.MODERATE]: {
-    chip: 'bg-status-high-dim text-status-high border-status-high/40',
-    hex: '#f5a524',
+    chip: 'bg-warn-50 text-warn-700 border-warn-200',
+    hex: '#f59e0b',
     label: 'Moderate',
   },
   [ImpactLevel.HIGH]: {
-    chip: 'bg-status-critical-dim text-status-critical border-status-critical/40',
-    hex: '#e5484d',
+    chip: 'bg-critical-50 text-critical-700 border-critical-200',
+    hex: '#ef4444',
     label: 'High',
   },
 };
 
 export const CORRIDOR_STATUS_STYLE: Record<CorridorStatus, StatusStyle> = {
-  [CorridorStatus.PENDING]: { chip: 'bg-ground-800 text-ground-300 border-ground-600', hex: '#93a6bb', label: 'Pending' },
-  [CorridorStatus.ACTIVE]: { chip: 'bg-status-ok-dim text-status-ok border-status-ok/40', hex: '#30a46c', label: 'Active' },
+  [CorridorStatus.PENDING]: { chip: 'bg-surface-sunken text-ink-600 border-line', hex: '#667085', label: 'Pending' },
+  [CorridorStatus.ACTIVE]: { chip: 'bg-ok-50 text-ok-700 border-ok-200', hex: '#12b76a', label: 'Active' },
   [CorridorStatus.SUSPENDED]: {
-    chip: 'bg-status-high-dim text-status-high border-status-high/40',
-    hex: '#f5a524',
+    chip: 'bg-warn-50 text-warn-700 border-warn-200',
+    hex: '#f59e0b',
     label: 'Suspended',
   },
-  [CorridorStatus.RELEASED]: { chip: 'bg-ground-800 text-ground-400 border-ground-700', hex: '#6b8098', label: 'Released' },
+  [CorridorStatus.RELEASED]: { chip: 'bg-surface-sunken text-ink-500 border-line', hex: '#3b82f6', label: 'Released' },
 };
 
 export const CONFLICT_STATUS_STYLE: Record<ConflictStatus, StatusStyle> = {
   [ConflictStatus.DETECTED]: {
-    chip: 'bg-status-critical-dim text-status-critical border-status-critical/40',
-    hex: '#e5484d',
+    chip: 'bg-critical-50 text-critical-700 border-critical-200',
+    hex: '#ef4444',
     label: 'Detected',
   },
   [ConflictStatus.RESOLVED_REROUTE]: {
-    chip: 'bg-status-ok-dim text-status-ok border-status-ok/40',
-    hex: '#30a46c',
+    chip: 'bg-ok-50 text-ok-700 border-ok-200',
+    hex: '#12b76a',
     label: 'Rerouted',
   },
   [ConflictStatus.RESOLVED_TIME_SLOT]: {
-    chip: 'bg-status-medium-dim text-status-medium border-status-medium/40',
-    hex: '#3d8bfd',
+    chip: 'bg-info-50 text-info-600 border-info-200',
+    hex: '#3b82f6',
     label: 'Time-slotted',
   },
   [ConflictStatus.RESOLVED_PRIORITY_HOLD]: {
-    chip: 'bg-status-high-dim text-status-high border-status-high/40',
-    hex: '#f5a524',
+    chip: 'bg-warn-50 text-warn-700 border-warn-200',
+    hex: '#f59e0b',
     label: 'Held',
   },
   [ConflictStatus.UNRESOLVED]: {
-    chip: 'bg-status-critical-dim text-status-critical border-status-critical/40',
-    hex: '#e5484d',
+    chip: 'bg-critical-50 text-critical-700 border-critical-200',
+    hex: '#ef4444',
     label: 'Unresolved',
   },
 };
 
 /** Colour a vehicle marker by type, so units are distinguishable on the map. */
 export const VEHICLE_KIND_COLOR: Record<VehicleKind, string> = {
-  [VehicleKind.AMBULANCE]: '#e5484d',
-  [VehicleKind.FIRE_TRUCK]: '#f5701f',
-  [VehicleKind.POLICE_UNIT]: '#3d8bfd',
+  [VehicleKind.AMBULANCE]: '#ef4444',
+  [VehicleKind.FIRE_TRUCK]: '#ea580c',
+  [VehicleKind.POLICE_UNIT]: '#3b82f6',
 };
 
 export const VEHICLE_KIND_LABEL: Record<VehicleKind, string> = {
