@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Radio } from 'lucide-react';
+import { SmartErMark } from '@/components/brand/SmartErMark';
 
 /** The framing the sign-in screen uses, shared with the recovery screens. */
 export function AuthShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
@@ -7,9 +7,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
     <div className="flex min-h-full items-center justify-center bg-canvas px-4 py-10">
       <div className="w-full max-w-[380px]">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="flex size-12 items-center justify-center rounded-xl bg-brand-600 shadow-sm">
-            <Radio className="size-6 text-white" />
-          </div>
+          <SmartErMark className="size-12 text-brand-700" />
           <h1 className="mt-3 text-xl font-semibold tracking-tight text-ink-900">{title}</h1>
           {subtitle && <p className="text-[13px] text-ink-500">{subtitle}</p>}
         </div>
