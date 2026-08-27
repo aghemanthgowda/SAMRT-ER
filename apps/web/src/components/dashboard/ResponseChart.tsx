@@ -20,8 +20,19 @@ export function ResponseChart({ samples, loading }: { samples: ResponseSample[];
   if (loading && samples.length === 0) {
     return <div className="m-4 h-[150px] animate-pulse rounded-lg bg-surface-sunken" />;
   }
-  if (samples.length === 0) {
-    return <Empty message="No response data yet" hint="Completed runs build this chart as the system operates." />;
+  /*
+   * The series always spans the window, so a system that has completed nothing
+   * still returns seven days — of zeroes. Drawing those would put a flat line
+   * along the axis and read as "0 % improvement", which is a performance claim
+   * about runs that never happened. With no runs at all there is no chart.
+   */
+  if (samples.length === 0 || samples.every((sample) => sample.completedRuns === 0)) {
+    return (
+      <Empty
+        message="No completed runs yet"
+        hint="This chart is built from real runs — it fills in as emergencies complete."
+      />
+    );
   }
 
   const width = 320;
@@ -65,7 +76,7 @@ export function ResponseChart({ samples, loading }: { samples: ResponseSample[];
       <div className="mb-2 flex items-baseline gap-2">
         <span className="tnum font-mono text-[26px] font-semibold leading-none text-ink-900">{mean}%</span>
         <span className="text-[12px] text-ink-500">
-          mean over {samples.length} days · {totalRuns} runs
+          mean over {samples.length} days · {totalRuns} {totalRuns === 1 ? 'run' : 'runs'}
         </span>
       </div>
 

@@ -1,6 +1,28 @@
 import type { ResponseSample, ServiceStatus } from '@smart-er/core';
 import { DeviceStatus, JunctionState, RequestStatus, VehicleStatus } from '@smart-er/core';
 import type { Store } from '../db/store.js';
+
+/**
+ * What the browser reports about the map provider.
+ *
+ * Mirrors `MapsHealth` in the web app. The two are separate declarations
+ * because the server must not assume the browser is honest or current — an
+ * unrecognised value is treated as unknown rather than trusted.
+ */
+export type MapsHealthReport = 'no-key' | 'loading' | 'ready' | 'unauthorized' | 'error';
+
+export function parseMapsHealth(value: unknown): MapsHealthReport {
+  return value === 'ready' || value === 'loading' || value === 'unauthorized' || value === 'error' ? value : 'no-key';
+}
+
+const MAPS_STATUS: Record<MapsHealthReport, Pick<ServiceStatus, 'state' | 'detail'>> = {
+  ready: { state: 'ONLINE', detail: 'Connected' },
+  loading: { state: 'UNKNOWN', detail: 'Connecting…' },
+  'no-key': { state: 'UNKNOWN', detail: 'No API key configured — demo map in use' },
+  unauthorized: { state: 'OFFLINE', detail: 'API key rejected by Google — demo map in use' },
+  error: { state: 'OFFLINE', detail: 'Unreachable — demo map in use' },
+};
+import { loadResponseHistory, writeResponseHistory } from '../db/persistence.js';
 import type { CorridorRuntime } from './corridorRuntime.js';
 import type { SimulationEngine } from '../simulation/engine.js';
 
@@ -14,11 +36,13 @@ import type { SimulationEngine } from '../simulation/engine.js';
  */
 export class AnalyticsService {
   /**
-   * Completed runs, keyed by ISO date, accumulated as the system runs.
+   * Completed runs, keyed by ISO date.
    *
-   * Seeded with a fortnight of plausible history so a fresh install has a
-   * chart rather than an empty box, then extended by real completions. The
-   * seed is generated here, in the data layer, not embedded in a component.
+   * Every entry is a run this system actually performed. There is no seeded
+   * history: a fabricated fortnight would have made a fresh install look like
+   * a system with a track record, and the improvement figure is the number
+   * someone would quote to justify the whole project. A new install shows no
+   * trend because it has none.
    */
   private readonly history = new Map<string, { runs: number; secondsSaved: number; baselineSeconds: number }>();
 
@@ -27,7 +51,19 @@ export class AnalyticsService {
     private readonly corridors: CorridorRuntime,
     private readonly simulation: SimulationEngine,
   ) {
-    this.seedHistory();
+    this.restore();
+  }
+
+  /** Load the trend a previous run left behind, when storage is durable. */
+  private restore(): void {
+    if (!this.store.db) return;
+    for (const row of loadResponseHistory(this.store.db)) {
+      this.history.set(row.date, {
+        runs: row.runs,
+        secondsSaved: row.secondsSaved,
+        baselineSeconds: row.baselineSeconds,
+      });
+    }
   }
 
   /**
@@ -48,6 +84,17 @@ export class AnalyticsService {
     entry.secondsSaved += Math.max(0, baselineSeconds - actualSeconds);
     entry.baselineSeconds += baselineSeconds;
     this.history.set(key, entry);
+
+    if (this.store.db) {
+      writeResponseHistory(this.store.db, { date: key, ...entry });
+    }
+  }
+
+  /** Total completed runs on record. Used to tell "no data" from "0 %". */
+  totalRuns(): number {
+    let total = 0;
+    for (const entry of this.history.values()) total += entry.runs;
+    return total;
   }
 
   /** The last `days` days of response performance, oldest first. */
@@ -89,7 +136,7 @@ export class AnalyticsService {
    * Every entry is derived. If the junction controllers stop responding this
    * reports it, and the dashboard shows a degraded row rather than a green one.
    */
-  systemStatus(mapsConfigured: boolean): ServiceStatus[] {
+  systemStatus(maps: MapsHealthReport = 'no-key'): ServiceStatus[] {
     const junctions = this.store.graph.junctions;
     const devices = this.store.repositories.devices.list();
 
@@ -151,10 +198,12 @@ export class AnalyticsService {
       {
         id: 'maps',
         label: 'Google Maps',
-        // The server cannot see the browser's key, so it reports what the
-        // client told it. Saying "connected" without knowing would be a lie.
-        state: mapsConfigured ? 'ONLINE' : 'UNKNOWN',
-        detail: mapsConfigured ? 'Connected' : 'No API key configured — demo map in use',
+        // The server cannot see the browser's key or reach Google on its
+        // behalf, so it reports what the browser observed. Note that this is
+        // the browser's *outcome*, not its configuration: a key that Google
+        // rejects is a failed provider, and reporting it as connected because
+        // the variable was set is exactly the lie this panel exists to avoid.
+        ...MAPS_STATUS[maps],
       },
       {
         id: 'network',
@@ -207,33 +256,6 @@ export class AnalyticsService {
     };
   }
 
-  /**
-   * Fourteen days of plausible prior operation.
-   *
-   * Without it a fresh install shows an empty chart, which reads as broken
-   * rather than as new. The values are generated deterministically from the
-   * date so a reload does not reshuffle the history in front of the operator.
-   */
-  private seedHistory(): void {
-    const today = new Date();
-    for (let offset = 13; offset >= 1; offset -= 1) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - offset);
-      const key = date.toISOString().slice(0, 10);
-
-      // Deterministic pseudo-variation from the date itself.
-      const seed = [...key].reduce((total, char) => total + char.charCodeAt(0), 0);
-      const runs = 4 + (seed % 7);
-      const improvement = 0.22 + ((seed % 17) / 100);
-      const baselinePerRun = 380 + (seed % 90);
-
-      this.history.set(key, {
-        runs,
-        baselineSeconds: runs * baselinePerRun,
-        secondsSaved: Math.round(runs * baselinePerRun * improvement),
-      });
-    }
-  }
 }
 
 function formatUptime(seconds: number): string {
