@@ -1,5 +1,5 @@
 import type { Junction, RoadSegment } from '../types/domain.js';
-import { TrafficLevel } from '../types/enums.js';
+import { Provisioning, TrafficLevel } from '../types/enums.js';
 
 /**
  * A small, fully-connected test network.
@@ -38,6 +38,7 @@ export function testJunctions(): Junction[] {
     name: spec.name,
     position: { lat: spec.lat, lng: spec.lng },
     hardwareDeviceId: `HW-${spec.code}`,
+    provisioning: Provisioning.SIMULATED,
     clearanceSeconds: 6,
     averageThroughputVph: spec.throughput,
     approaches: [

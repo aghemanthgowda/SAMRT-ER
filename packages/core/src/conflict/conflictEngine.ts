@@ -34,6 +34,33 @@ export interface ConflictDetectionOptions {
    */
   defaultClearanceSeconds?: number;
   clearanceByJunctionId?: ReadonlyMap<string, number>;
+  /**
+   * Which approaches physically conflict at each junction:
+   * junction id → approach id → the approaches it cannot run alongside.
+   *
+   * Without this, two vehicles crossing the same junction *in opposite
+   * directions* are reported as contending — but opposing movements run on the
+   * same signal phase, so the junction can serve both at once. Treating that as
+   * a conflict spends a reroute, or a time-slot hold, on a problem that does
+   * not exist. Supply the matrix and only genuinely crossing movements are
+   * flagged.
+   */
+  approachConflictsByJunction?: ReadonlyMap<string, ReadonlyMap<string, ReadonlySet<string>>>;
+}
+
+/** Build the approach-conflict matrix from a set of junctions. */
+export function approachConflictMatrix(
+  junctions: readonly { id: string; approaches: readonly { id: string; conflictsWith: readonly string[] }[] }[],
+): Map<string, Map<string, Set<string>>> {
+  const matrix = new Map<string, Map<string, Set<string>>>();
+  for (const junction of junctions) {
+    const byApproach = new Map<string, Set<string>>();
+    for (const approach of junction.approaches) {
+      byApproach.set(approach.id, new Set(approach.conflictsWith));
+    }
+    matrix.set(junction.id, byApproach);
+  }
+  return matrix;
 }
 
 /**
@@ -65,11 +92,20 @@ export function detectConflicts(
       (a, b) => new Date(a.arrivalAt).getTime() - new Date(b.arrivalAt).getTime(),
     );
 
+    const approachConflicts = options.approachConflictsByJunction?.get(junctionId);
+
     for (let i = 0; i < ordered.length - 1; i += 1) {
       const first = ordered[i]!;
       for (let j = i + 1; j < ordered.length; j += 1) {
         const second = ordered[j]!;
         if (first.vehicleId === second.vehicleId) continue;
+
+        // Two vehicles on compatible approaches — typically opposing movements
+        // on the same phase — can both be held green. That is not contention.
+        if (approachConflicts && first.approachId !== second.approachId) {
+          const blocked = approachConflicts.get(first.approachId);
+          if (blocked && !blocked.has(second.approachId)) continue;
+        }
 
         const gap = secondsBetween(first.arrivalAt, second.arrivalAt);
         const headway = gap - first.occupancySeconds - clearance;

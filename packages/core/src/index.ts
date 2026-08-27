@@ -36,6 +36,7 @@ export type { PriorityInput } from './priority/priority.js';
 // Conflict -------------------------------------------------------------------
 export {
   activeReservations,
+  approachConflictMatrix,
   detectConflicts,
   occupiedWindows,
   sharedJunctions,

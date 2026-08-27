@@ -6,7 +6,7 @@ import { ConflictStatus, DestinationKind, ResolutionStrategy, Severity, VehicleK
 import { priorityScore } from '../priority/priority.js';
 import { resetIds } from '../util/id.js';
 import { isoAdd, isoNow } from '../util/time.js';
-import { detectConflicts, sharedJunctions, type PlannedArrival } from './conflictEngine.js';
+import { approachConflictMatrix, detectConflicts, sharedJunctions, type PlannedArrival } from './conflictEngine.js';
 import { orderContenders, resolveConflict } from './resolution.js';
 
 function arrival(overrides: Partial<PlannedArrival> & Pick<PlannedArrival, 'vehicleId' | 'arrivalAt'>): PlannedArrival {
@@ -75,6 +75,56 @@ describe('conflict detection', () => {
     expect(
       detectConflicts(arrivals, { clearanceByJunctionId: new Map([['J2', 20]]) }),
     ).toHaveLength(1);
+  });
+
+  it('does not flag opposing movements the junction can serve together', () => {
+    const base = isoNow();
+    // J2-N and J2-S are opposing approaches: in the fixture they conflict with
+    // E and W, but not with each other, so both can be held green at once.
+    const matrix = approachConflictMatrix(testJunctions());
+
+    const arrivals = [
+      arrival({ vehicleId: 'AMB-01', arrivalAt: base, approachId: 'J2-N' }),
+      arrival({ vehicleId: 'FIRE-01', arrivalAt: isoAdd(base, 3), approachId: 'J2-S' }),
+    ];
+
+    // Without the matrix the timing alone looks like contention.
+    expect(detectConflicts(arrivals, { defaultClearanceSeconds: 6 })).toHaveLength(1);
+    // With it, the junction can serve both and there is nothing to resolve.
+    expect(
+      detectConflicts(arrivals, { defaultClearanceSeconds: 6, approachConflictsByJunction: matrix }),
+    ).toHaveLength(0);
+  });
+
+  it('still flags crossing movements that cannot share the junction', () => {
+    const base = isoNow();
+    const matrix = approachConflictMatrix(testJunctions());
+
+    const conflicts = detectConflicts(
+      [
+        arrival({ vehicleId: 'AMB-01', arrivalAt: base, approachId: 'J2-N' }),
+        arrival({ vehicleId: 'POL-02', arrivalAt: isoAdd(base, 3), approachId: 'J2-E' }),
+      ],
+      { defaultClearanceSeconds: 6, approachConflictsByJunction: matrix },
+    );
+
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]!.junctionId).toBe('J2');
+  });
+
+  it('flags two vehicles on the same approach regardless of the matrix', () => {
+    const base = isoNow();
+    const matrix = approachConflictMatrix(testJunctions());
+
+    // One approach cannot serve two emergency vehicles nose to tail either.
+    const conflicts = detectConflicts(
+      [
+        arrival({ vehicleId: 'AMB-01', arrivalAt: base, approachId: 'J2-N' }),
+        arrival({ vehicleId: 'AMB-02', arrivalAt: isoAdd(base, 3), approachId: 'J2-N' }),
+      ],
+      { defaultClearanceSeconds: 6, approachConflictsByJunction: matrix },
+    );
+    expect(conflicts).toHaveLength(1);
   });
 
   it('finds shared junctions between two routes', () => {

@@ -188,6 +188,21 @@ export const HardwareMode = {
 } as const;
 export type HardwareMode = (typeof HardwareMode)[keyof typeof HardwareMode];
 
+/**
+ * Whether a vehicle or junction is backed by real hardware or by the simulator.
+ *
+ * Distinct from HardwareMode, which describes the transport implementation.
+ * This is the operational fact a controller needs: is the position on the map
+ * a real GPS fix from a real vehicle, or a simulated track? During the hardware
+ * demonstration the two will be on screen side by side, and the display must
+ * not blur them together.
+ */
+export const Provisioning = {
+  PHYSICAL: 'PHYSICAL',
+  SIMULATED: 'SIMULATED',
+} as const;
+export type Provisioning = (typeof Provisioning)[keyof typeof Provisioning];
+
 export const RouteChoiceReason = {
   FASTEST_SAFE: 'FASTEST_SAFE',
   CONFLICT_FREE_ALTERNATIVE: 'CONFLICT_FREE_ALTERNATIVE',

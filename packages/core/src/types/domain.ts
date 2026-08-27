@@ -9,6 +9,7 @@ import type {
   IncidentKind,
   IncidentStatus,
   JunctionState,
+  Provisioning,
   RequestStatus,
   ResolutionStrategy,
   Role,
@@ -104,6 +105,8 @@ export interface Vehicle {
   standbyPosition: LatLng;
   /** Free-flow cruising speed used for ETA when no live traffic data exists (km/h). */
   cruisingSpeedKph: number;
+  /** Real vehicle with a real on-board unit, or a simulated one. */
+  provisioning: Provisioning;
   active: boolean;
 }
 
@@ -177,6 +180,8 @@ export interface Junction {
   clearanceSeconds: number;
   /** Typical vehicles per hour through the junction — drives public impact math. */
   averageThroughputVph: number;
+  /** Real signal controller on a pole, or a simulated one. */
+  provisioning: Provisioning;
 }
 
 export interface JunctionApproach {
@@ -429,6 +434,8 @@ export interface SignalAcknowledgement {
 export interface HardwareDevice {
   id: string;
   kind: DeviceKind;
+  /** Real hardware or simulator. Shown to the controller alongside health. */
+  provisioning: Provisioning;
   /** Stable hardware identity, e.g. HW-AMB-01. Matches the firmware's device id. */
   serial: string;
   mode: HardwareMode;
@@ -486,6 +493,34 @@ export interface TimelineEvent {
   severity?: Severity;
   /** Extra structured detail for the decision-explanation panel. */
   data?: Record<string, unknown>;
+}
+
+/**
+ * One day of aggregated response performance.
+ *
+ * Produced from completed runs: the baseline is the ETA the same journey would
+ * have taken with no corridor (junction delays included), and the actual is
+ * what it took with one. The difference is what SMART-ER bought, and it is the
+ * only honest way to state the system's benefit.
+ */
+export interface ResponseSample {
+  /** ISO date, YYYY-MM-DD. */
+  date: string;
+  /** Percentage improvement against the no-corridor baseline. */
+  improvementPercent: number;
+  /** Runs completed that day. */
+  completedRuns: number;
+  /** Mean seconds saved per run. */
+  averageSecondsSaved: number;
+}
+
+/** Health of one subsystem, as reported to the operator. */
+export interface ServiceStatus {
+  id: string;
+  label: string;
+  state: 'ONLINE' | 'DEGRADED' | 'OFFLINE' | 'UNKNOWN';
+  /** Short operator-facing detail, e.g. "22 of 25 controllers responding". */
+  detail: string;
 }
 
 export interface SimulationScenario {

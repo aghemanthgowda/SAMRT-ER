@@ -5,7 +5,7 @@ import type {
   SignalCommand,
   Timestamp,
 } from '../types/domain.js';
-import { DeviceKind, DeviceStatus, HardwareMode, SignalAspect } from '../types/enums.js';
+import { DeviceKind, DeviceStatus, HardwareMode, Provisioning, SignalAspect } from '../types/enums.js';
 import { SeededRandom } from '../util/random.js';
 import type { Clock } from '../util/clock.js';
 import { SystemClock } from '../util/clock.js';
@@ -515,6 +515,9 @@ export function createSimulatedHardware(
     ...junctions.map<HardwareDevice>((junction) => ({
       id: junction.hardwareDeviceId,
       kind: DeviceKind.JUNCTION_CONTROLLER,
+      // The simulator only ever creates simulated devices; a real controller
+      // is registered by the ESP32 bundle in Phase 2.
+      provisioning: junction.provisioning,
       serial: junction.hardwareDeviceId,
       mode: HardwareMode.SIMULATED,
       status: DeviceStatus.ONLINE,
@@ -526,6 +529,7 @@ export function createSimulatedHardware(
     ...[...vehicleDeviceIds.entries()].map<HardwareDevice>(([vehicleId, deviceId]) => ({
       id: deviceId,
       kind: DeviceKind.VEHICLE_UNIT,
+      provisioning: Provisioning.SIMULATED,
       serial: deviceId,
       mode: HardwareMode.SIMULATED,
       status: DeviceStatus.ONLINE,
