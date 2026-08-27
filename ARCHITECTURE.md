@@ -304,6 +304,24 @@ wrong. The sign-in screen therefore cannot display accounts or hints, because
 there is nothing for it to display. A test asserts each of those endpoints
 stays absent.
 
+Recovery is held to the same standard, because whatever guarantees sign-in
+makes are worth exactly as much as the weakest way of replacing a password. A
+reset token is 32 random bytes, stored only as a SHA-256 hash, single-use, and
+valid for 30 minutes; issuing a second retires the first, so repeated requests
+move the window rather than widening it. It is never returned through the API
+that created it — it has to be delivered out of band to be worth anything — and
+every failure mode, unknown token and expired token and spent token alike,
+produces one message.
+
+Delivery is a port, `PasswordResetDelivery`, mirroring the hardware abstraction
+layer for the same reason: Phase 1 has no mail relay, and the flow should not
+change when one arrives. The Phase 1 adapter logs the link, which is correct
+for an operator at the machine and unacceptable where logs are shipped
+elsewhere, so it withholds the link in production and says only that a reset
+was requested. Whether it withholds is a constructor argument rather than a
+read of global config, because a safety property nobody can exercise is a
+safety property nobody knows still works.
+
 **Vehicles** authenticate through the identity chain:
 
 ```
@@ -349,30 +367,104 @@ identity chain — and the interface's job is only to display it.
 `services/analytics.ts` owns the two figures that need history rather than a
 snapshot. Each completed run reports its baseline ETA (what the trip would have
 taken without a corridor) and its actual duration; the difference is that run's
-improvement, and the service keeps a day-bucketed series alongside a seeded
-fortnight so the trend has a shape on a freshly-started system.
+improvement, and the service keeps a day-bucketed series, persisted so it
+survives a restart.
+
+Every entry is a run the system actually performed. There is no seeded history.
+An earlier version generated a plausible fortnight so a fresh install had a
+chart rather than an empty box, and that was a mistake: the improvement
+percentage is the number someone quotes to justify the whole project, and a new
+install is not entitled to a track record. A system that has completed nothing
+says so.
 
 A day with no completed runs is a gap, not a zero. The chart breaks the line
 across it and marks the axis tick hollow, because drawing 0% would read as
-"the system saved nothing that day" rather than "nothing ran".
+"the system saved nothing that day" rather than "nothing ran". A window with no
+runs at all draws no chart, for the same reason.
 
-`systemStatus()` derives its rows the same way, and reports the map provider as
-unknown rather than healthy when the browser has no API key — a component that
-cannot be reached is not a component that is working.
+`systemStatus()` derives its rows the same way. The map provider is the subtle
+one: a key being configured is not the same as Google accepting it, so the row
+reports what the browser *observed* rather than what was set. See below.
+
+---
+
+## The map provider
+
+Google Maps is the one dependency that can fail while appearing to succeed, and
+it does so in the way that is hardest to notice.
+
+When a key is rejected — wrong key, origin not on the allow-list, billing
+disabled, API not enabled — Google still serves the API script with a 200.
+`script.onerror` does not fire. `importLibrary` resolves. The `Map` constructor
+succeeds. The only signal is a call to a global function, `gm_authFailure`, and
+what the operator sees is a grey rectangle behind an error dialog.
+
+So a console that reports the provider healthy because `VITE_GOOGLE_MAPS_API_KEY`
+is set will tell an operator the map works while they are looking at nothing.
+The loader instead installs Google's callback before the script runs and tracks
+a `MapsHealth` of `no-key`, `loading`, `ready`, `unauthorized` or `error`. The
+rejection arrives after the map has already been created, so the state is
+published to subscribers rather than returned once: the map hook and the
+dashboard both watch it and correct themselves when the verdict lands.
+
+Two further gaps are closed in the same place. A load that never resolves —
+blocked by an extension, a proxy, an offline network — used to leave the
+console on a spinner indefinitely, because `onerror` is not guaranteed to fire
+either; there is now a fifteen-second timeout that falls back to the schematic
+map. And whether the Routes library was reachable on the configured channel is
+recorded rather than thrown, since falling back to `DirectionsService` is a
+degradation, not a failure — but the operator should be able to see which one
+answered.
+
+The server cannot see the browser's key or reach Google on its behalf, so the
+browser reports its observed health and the server renders it. That claim is
+parsed, not trusted: an unrecognised value is treated as `no-key`.
 
 ---
 
 ## Persistence
 
-Phase 1 uses in-memory repositories behind the interfaces in
-`apps/server/src/db/repositories.ts`. Everything the application does goes
-through `Repositories`, so moving to Postgres or SQLite is a new implementation
-of that file plus different wiring in `store.ts` — no service changes.
+Everything the application does goes through the `Repositories` interfaces in
+`apps/server/src/db/repositories.ts`. Storage sits behind them in two modes —
+in memory, and durable against SQLite — and no service can tell which it has.
 
-The choice is deliberate: the point of Phase 1 is a system that starts with
-`npm run dev` and demonstrates end to end, and a database to provision would
-work against that. The timeline and notification repositories are ring buffers
-with retention caps, since both are written on every state transition.
+SQLite through `node:sqlite` rather than a driver from npm, because it needs no
+native compilation and no server to provision. The property that made the
+original in-memory store attractive — `npm run dev` and the system is up — is
+what a database usually costs you, and here it does not.
+
+**Reads stay in memory.** Each repository keeps the `Map` it always had and
+answers `get`/`list`/`find` from it; SQLite is written through on mutation and
+read once, at boot. That is not premature optimisation: the simulation calls
+`activeRoutes()` and its neighbours on every tick, and parsing every stored
+document on every read would turn a durability change into a throughput
+regression. The write-through point is a `PersistenceSink`, which is also how
+the ring buffers keep their eviction consistent — an entry dropped by the cap
+is deleted from storage in the same step.
+
+Insertion order is load-bearing for the timeline and notification buffers:
+`recent()` reads the tail and the cap drops the head. Rows therefore carry a
+sequence number, so the restored order matches the order they were written in
+rather than whatever the query planner returned.
+
+**Seeding happens once, into an empty database.** Re-seeding over a live one
+would discard changed passwords, decommissioned vehicles and the entire run
+history, so the check is "are there any users?" and nothing else.
+
+### What a restart must not restore
+
+A stored record can describe a state that no longer exists anywhere. Two do:
+
+- **An active corridor** is a claim on signals that are physically held. The
+  process holding them is gone, and this boot has constructed a fresh hardware
+  bundle with every junction back under normal control. Restoring the corridor
+  would have the dashboard show greens nobody is holding, and the corridor
+  engine try to release junctions it never claimed. The record is kept — it is
+  the run history — but it is closed, its allocations are returned to NORMAL,
+  and any vehicle it was driving goes back to standby.
+- **Device health** describes hardware that answered during the previous run.
+  This process has not heard from any of it yet, so the live bundle wins and
+  the remembered rows are discarded.
 
 ---
 

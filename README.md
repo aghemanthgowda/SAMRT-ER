@@ -17,6 +17,8 @@ devices without changing anything above the hardware abstraction layer.
 
 ## Quick start
 
+Requires **Node 22.5 or newer** — storage uses the built-in `node:sqlite`.
+
 ```bash
 git clone https://github.com/aghemanthgowda/SAMRT-ER.git
 cd SAMRT-ER
@@ -49,12 +51,21 @@ Every seeded account is given the value of `SEED_PASSWORD`, bcrypt-hashed
 before it is stored. Set it in `.env` before you start:
 
 ```bash
-SEED_PASSWORD=pick-your-own
+SEED_PASSWORD=pick-your-own-long-one
 ```
 
-Unset, it falls back to a development default so a fresh clone still runs.
-Change it before exposing the server beyond your own machine — and note that
-the seed only applies to a database that has no users yet.
+Unset, it falls back to a development default so a fresh clone still runs. It
+has to satisfy the same policy as a chosen password — at least 12 characters —
+and outside production a value that does not is reported and replaced with the
+default rather than producing accounts nobody can change the password of.
+
+Seeding happens once, into an empty database. After that the stored accounts
+are authoritative: changing `SEED_PASSWORD` does nothing, because re-seeding
+over a live database would discard every password anyone had since chosen.
+
+Forgotten a password? **Forgot password?** on the sign-in screen issues a
+single-use link that expires in 30 minutes. In Phase 1 the link is written to
+the server log — see [Password recovery](#password-recovery).
 
 The driver screens are mobile-first — open them on a phone, or in a narrow
 browser window.
@@ -127,6 +138,14 @@ which still give real road geometry and traffic-aware ETAs. The detail panel
 always states which provider answered, so an ETA is never attributed to a
 source it did not come from.
 
+**A key that Google rejects is reported as a failure, not as success.** An
+invalid key, an origin missing from the allow-list, disabled billing or an
+un-enabled API all produce a 200 from Google and a grey map, so the loader
+watches for Google's `gm_authFailure` callback and reports the provider as
+offline in **System status** and **Settings** rather than showing "Connected"
+over an empty panel. A load that never answers times out after fifteen seconds
+instead of leaving the console on a spinner.
+
 **Without a key the application still boots and runs completely.** It renders a
 clearly labelled schematic **demo map** instead. Every capability — routing,
 conflict resolution, the rolling corridor, the simulation — works identically;
@@ -151,6 +170,59 @@ When a route is planned, the browser asks Google for the real road polyline and
 traffic-aware ETA and posts them back to the server, so simulated vehicles
 follow actual roads. The junction sequencing is untouched: a corridor is a
 reservation over SMART-ER's own junction network.
+
+---
+
+## Storage
+
+Operational state is held in SQLite at `data/smart-er.db`, created on first
+boot. Nothing to install and nothing to provision — `node:sqlite` is built into
+Node — so the property that made the original in-memory store attractive
+survives the system gaining a database. Node prints an experimental-feature
+warning for it on startup; that is Node being accurate about its own API, not a
+fault in the application.
+
+What persists: accounts and password hashes, vehicles, drivers, facilities,
+incidents, requests, routes, corridors, conflicts, the timeline, and the
+response-improvement history. A restart picks up where the last run left off.
+
+Two things are deliberately *not* restored:
+
+- **Corridors that were still active.** A corridor is a claim on signals that
+  are physically held. The process holding them is gone and this boot has a
+  fresh hardware bundle with every junction back under normal control, so a
+  stored active corridor describes a state that exists nowhere. The record is
+  kept — it is the run history — but it is closed and its junctions released.
+- **Device health.** The stored rows describe hardware that answered during the
+  last run. This boot does not know what is reachable until it is told.
+
+`data/` is git-ignored: the file contains password hashes and must never be
+committed. Set `DATABASE_PATH=` (empty) to run entirely in memory instead;
+tests always do.
+
+---
+
+## Password recovery
+
+**Forgot password?** on the sign-in screen issues a recovery link. The token is
+32 random bytes, stored only as a SHA-256 hash, single-use, and expires in 30
+minutes; requesting a second link retires the first. It is never returned
+through the API that created it, and the request is answered identically
+whether or not the address has an account — an endpoint that says "no such
+account" is an account-enumeration oracle that needs no credentials.
+
+Delivery is a port, `PasswordResetDelivery`, for the same reason the hardware
+is: Phase 1 has no mail relay, and the flow around it should not have to change
+when one arrives. The Phase 1 adapter writes the link to the **server log**,
+which is right for an operator at the machine and wrong everywhere else — so in
+production it records that a reset was requested and withholds the link. Ship a
+real deployment with an adapter that emails or texts it.
+
+Signed-in operators can change their own password under **Settings → Password**.
+The current password is required even though the form is behind a session: a
+console left unlocked should not be enough to take an account away from the
+person who owns it. Passwords must be at least 12 characters and may not
+contain the account's address or the name of the system.
 
 ---
 
@@ -212,8 +284,8 @@ packages/core/          domain model and decision engines — no I/O, no framewo
   hardware/             the Phase 1 / Phase 2 boundary
 
 apps/server/            Express + Socket.IO
-  db/                   junction network, seed data, repositories
-  auth/                 authentication and the vehicle identity chain
+  db/                   junction network, seed data, repositories, SQLite
+  auth/                 authentication, passwords, the vehicle identity chain
   services/             dispatch, routing, corridor runtime, analytics,
                         notifications
   simulation/           tick loop and demonstration scenarios
@@ -226,9 +298,11 @@ apps/web/               React + Vite
   components/dashboard/ stat cards, active emergencies, queue, alerts,
                         system status, response chart
   components/panels/    operational panels shared across consoles
+  components/settings/  change password
   hooks/                dashboard data fetching
   pages/controller/     dashboard, map, requests, vehicles, junctions,
                         incidents, alerts, reports, settings
+  pages/auth/           forgot password, reset password
   pages/                driver, hospital, fire, police
   stores/               auth and realtime operational state
 ```
@@ -242,7 +316,7 @@ npm run dev          # server on :4000 and web on :5173
 npm run dev:server   # server only
 npm run dev:web      # web only
 
-npm test             # 179 tests across all three packages
+npm test             # 242 tests across all three packages
 npm run typecheck
 npm run lint
 npm run build        # production build of all packages
@@ -268,6 +342,8 @@ with none of them set.
 | `JWT_SECRET` | Token signing secret — **required in production** |
 | `SEED_PASSWORD` | Password given to seeded accounts, bcrypt-hashed on write |
 | `CORS_ORIGIN` | Allowed browser origins |
+| `APP_BASE_URL` | Where the browser reaches the app; password-reset links point here |
+| `DATABASE_PATH` | SQLite file; empty string runs in memory |
 | `SIM_TICK_MS`, `SIM_SPEED` | Simulation cadence |
 | `VITE_API_BASE_URL` | API base URL as seen from the browser |
 
@@ -283,7 +359,7 @@ given a secret of any kind.
 
 ## Testing
 
-179 tests, run with `npm test`.
+242 tests, run with `npm test`.
 
 - **72 core tests** — routing (including that a longer, faster route wins),
   the rolling corridor (including that it never holds the whole route),
@@ -291,12 +367,17 @@ given a secret of any kind.
   movements through one junction are *not* a conflict — the safety validator's
   refusals, the public impact model, geometry, and simulated hardware
   including its failure modes.
-- **64 server tests** — the nineteen scenarios from the specification driven
+- **104 server tests** — the nineteen scenarios from the specification driven
   end to end through the real services, plus authentication, authorization,
   the REST surface, and that no endpoint will enumerate accounts or return a
-  password.
-- **43 web tests** — route comparison, conflict monitor, request queue, the
-  demo map, the Maps loader, the status colour contract and the realtime store.
+  password. Password recovery is covered end to end: single use, expiry,
+  supersession, policy, and that the endpoint answers identically for a known
+  and an unknown address. Durability is tested by opening a store against a
+  real file, closing it, and opening a second one over the same file.
+- **66 web tests** — route comparison, conflict monitor, request queue, the
+  demo map, the status colour contract, the realtime store, the recovery
+  screens, and the Maps loader — including that a key Google rejects is
+  reported as a failed provider rather than a healthy one.
 
 ---
 
