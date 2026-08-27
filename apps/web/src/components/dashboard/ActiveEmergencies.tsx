@@ -4,6 +4,7 @@ import type { Vehicle } from '@smart-er/core';
 import { Provisioning, VehicleKind, VehicleStatus, formatEta } from '@smart-er/core';
 import { Badge, CardLink, Empty } from '@/components/ui/primitives';
 import { SEVERITY_STYLE, VEHICLE_KIND_COLOR, VEHICLE_STATUS_STYLE } from '@/lib/status';
+import { VehicleImage } from '@/components/brand/VehicleImage';
 import { useOpsStore } from '@/stores/opsStore';
 
 const KIND_ICON = {
@@ -74,12 +75,14 @@ export function ActiveEmergencies({ vehicleById }: { vehicleById: Map<string, Ve
                     className="row-button px-4 py-3"
                   >
                     <div className="flex items-start gap-3">
-                      <div
-                        className="flex size-9 shrink-0 items-center justify-center rounded-lg"
-                        style={{ backgroundColor: `${color}14`, color }}
-                      >
-                        <Icon className="size-[18px]" />
-                      </div>
+                      {/* The artwork stands on its own — no tinted disc behind it. */}
+                      {vehicle ? (
+                        <VehicleImage kind={vehicle.kind} />
+                      ) : (
+                        <div className="flex size-9 shrink-0 items-center justify-center" style={{ color }}>
+                          <Icon className="size-[18px]" />
+                        </div>
+                      )}
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">

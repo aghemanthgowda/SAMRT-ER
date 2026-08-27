@@ -5,6 +5,7 @@ import { Severity, VehicleKind } from '@smart-er/core';
 import { api } from '@/api/client';
 import { Badge, Button, Empty } from '@/components/ui/primitives';
 import { SEVERITY_STYLE, VEHICLE_KIND_COLOR } from '@/lib/status';
+import { VehicleImage } from '@/components/brand/VehicleImage';
 import { useOpsStore, usePendingRequests } from '@/stores/opsStore';
 
 const KIND_ICON = {
@@ -95,12 +96,13 @@ export function RequestQueuePanel({
                 onClick={() => select({ kind: 'vehicle', id: request.vehicleId })}
               >
                 <div className="flex items-start gap-3">
-                  <div
-                    className="flex size-8 shrink-0 items-center justify-center rounded-lg"
-                    style={{ backgroundColor: `${color}14`, color }}
-                  >
-                    <Icon className="size-4" />
-                  </div>
+                  {vehicle ? (
+                    <VehicleImage kind={vehicle.kind} className="vehicle-icon-sm shrink-0" />
+                  ) : (
+                    <div className="flex size-8 shrink-0 items-center justify-center" style={{ color }}>
+                      <Icon className="size-4" />
+                    </div>
+                  )}
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">

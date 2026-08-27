@@ -281,14 +281,14 @@ export class SmartErOverlay {
       live.add(state.vehicleId);
 
       const hidden = data.hiddenVehicleIds.has(state.vehicleId);
-      const corridor = data.corridors.find((entry) => entry.id === state.corridorId);
-      const ringColor = corridorRingColor(corridor, state);
       const selected = data.selection?.kind === 'vehicle' && data.selection.id === state.vehicleId;
 
+      // 34x28 keeps the marker small enough not to crowd a junction, and the
+      // ratio matches the artwork so nothing is stretched.
       const icon = {
-        url: vehicleMarkerIcon(vehicle.kind, state.heading, ringColor, hidden || !state.gpsOk),
-        scaledSize: new google.maps.Size(36, 36),
-        anchor: new google.maps.Point(18, 18),
+        url: vehicleMarkerIcon(vehicle.kind),
+        scaledSize: new google.maps.Size(34, 28),
+        anchor: new google.maps.Point(17, 14),
       };
 
       const existing = this.vehicleMarkers.get(state.vehicleId);
@@ -387,14 +387,3 @@ export class SmartErOverlay {
   }
 }
 
-/**
- * The ring around a vehicle marker reports what its corridor is doing right
- * now, so a controller can read a unit's state from the map alone.
- */
-function corridorRingColor(corridor: Corridor | undefined, state: VehicleState): string {
-  if (!state.gpsOk) return JUNCTION_STATE_STYLE[JunctionState.OFFLINE].hex;
-  if (!corridor) return '#667085';
-  if (corridor.activeJunctionId) return JUNCTION_STATE_STYLE[JunctionState.GREEN].hex;
-  if (corridor.preparingJunctionIds.length > 0) return JUNCTION_STATE_STYLE[JunctionState.PREPARING].hex;
-  return '#667085';
-}

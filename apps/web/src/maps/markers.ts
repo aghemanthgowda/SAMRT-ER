@@ -1,5 +1,18 @@
 import type { VehicleKind } from '@smart-er/core';
-import { VEHICLE_KIND_COLOR } from '@/lib/status';
+import { vehicleAssetUrl } from '@/lib/vehicleAssets';
+
+/**
+ * A vehicle marker is the unit's own artwork, at map scale.
+ *
+ * It used to be a coloured disc with an abstract glyph, which read as a dot at
+ * map zoom: an operator could see that something was there, but not what.
+ * Corridor state is carried by the route line and the junction markers, which
+ * is where it belongs — a ring around every vehicle only added clutter to the
+ * one thing on the map that should be instantly recognisable.
+ */
+export function vehicleMarkerIcon(kind: VehicleKind): string {
+  return vehicleAssetUrl(kind);
+}
 
 /**
  * Map marker artwork, as inline SVG data URIs.
@@ -12,37 +25,6 @@ import { VEHICLE_KIND_COLOR } from '@/lib/status';
 
 function dataUri(svg: string): string {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg.replace(/\s+/g, ' ').trim())}`;
-}
-
-const GLYPH: Record<VehicleKind, string> = {
-  AMBULANCE:
-    '<path d="M12 8.5v7M8.5 12h7" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>',
-  FIRE_TRUCK:
-    '<path d="M12 7.4c1.9 2.2 3.6 3.7 3.6 6a3.6 3.6 0 1 1-7.2 0c0-2.3 1.7-3.8 3.6-6z" fill="#fff"/>',
-  POLICE_UNIT:
-    '<path d="M12 7l4 1.8v3.1c0 2.4-1.6 4.4-4 5.1-2.4-.7-4-2.7-4-5.1V8.8L12 7z" fill="#fff"/>',
-};
-
-/**
- * A vehicle marker: a coloured disc with a type glyph and a heading pointer.
- * `ringColor` carries corridor state so a unit's status is legible without
- * opening its panel.
- */
-export function vehicleMarkerIcon(kind: VehicleKind, heading: number, ringColor: string, dimmed = false): string {
-  const fill = VEHICLE_KIND_COLOR[kind];
-  const opacity = dimmed ? 0.45 : 1;
-  return dataUri(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36" opacity="${opacity}">
-      <g transform="translate(18 18)">
-        <g transform="rotate(${Math.round(heading)})">
-          <path d="M0 -15.5 L4.2 -9.5 L-4.2 -9.5 Z" fill="${ringColor}"/>
-        </g>
-        <circle r="11" fill="${ringColor}" opacity="0.9"/>
-        <circle r="9" fill="${fill}"/>
-        <g transform="translate(-12 -12)">${GLYPH[kind]}</g>
-      </g>
-    </svg>
-  `);
 }
 
 /**

@@ -1,17 +1,12 @@
-import { Ambulance, Flame, SatelliteDish, ShieldCheck } from 'lucide-react';
-import { Provisioning, VehicleKind, VehicleStatus, formatDistance, formatEta } from '@smart-er/core';
+import { SatelliteDish } from 'lucide-react';
+import { Provisioning, VehicleStatus, formatDistance, formatEta } from '@smart-er/core';
 import { Badge, Card, Empty } from '@/components/ui/primitives';
 import { DetailPanel } from '@/components/panels/DetailPanel';
 import { ControllerLayout } from '@/components/shell/ControllerLayout';
 import { useVehicleIndex } from '@/hooks/useVehicleIndex';
-import { SEVERITY_STYLE, VEHICLE_KIND_COLOR, VEHICLE_STATUS_STYLE } from '@/lib/status';
+import { SEVERITY_STYLE, VEHICLE_STATUS_STYLE } from '@/lib/status';
+import { VehicleImage } from '@/components/brand/VehicleImage';
 import { useOpsStore } from '@/stores/opsStore';
-
-const KIND_ICON = {
-  [VehicleKind.AMBULANCE]: Ambulance,
-  [VehicleKind.FIRE_TRUCK]: Flame,
-  [VehicleKind.POLICE_UNIT]: ShieldCheck,
-} as const;
 
 /**
  * The vehicle register.
@@ -76,8 +71,6 @@ export function VehiclesPage() {
                     const state = states[vehicle.id];
                     const request = state?.activeRequestId ? requests[state.activeRequestId] : undefined;
                     const status = VEHICLE_STATUS_STYLE[state?.status ?? VehicleStatus.OFFLINE];
-                    const Icon = KIND_ICON[vehicle.kind];
-                    const color = VEHICLE_KIND_COLOR[vehicle.kind];
                     const selected = selection?.kind === 'vehicle' && selection.id === vehicle.id;
 
                     return (
@@ -89,7 +82,7 @@ export function VehiclesPage() {
                       >
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-2">
-                            <Icon className="size-4 shrink-0" style={{ color }} />
+                            <VehicleImage kind={vehicle.kind} className="vehicle-icon-sm shrink-0" />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="tnum whitespace-nowrap font-mono text-[13px] font-semibold text-ink-900">

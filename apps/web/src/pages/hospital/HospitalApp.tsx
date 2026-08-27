@@ -9,6 +9,7 @@ import { TopBar } from '@/components/shell/TopBar';
 import { useRealtime } from '@/hooks/useRealtime';
 import { useVehicleIndex } from '@/hooks/useVehicleIndex';
 import { SEVERITY_STYLE, VEHICLE_STATUS_STYLE } from '@/lib/status';
+import { VehicleImage } from '@/components/brand/VehicleImage';
 import { OperationsMap } from '@/maps/OperationsMap';
 import { useAuthStore } from '@/stores/authStore';
 import { useOpsStore } from '@/stores/opsStore';
@@ -106,6 +107,7 @@ export function HospitalApp() {
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
+                        {vehicle && <VehicleImage kind={vehicle.kind} className="vehicle-icon-sm mt-0.5 shrink-0" />}
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="tnum font-mono text-sm font-semibold text-ink-900">

@@ -218,6 +218,32 @@
   }
 
   /* Status pill. Colour comes from the status map so it cannot drift. */
+  /*
+   * Vehicle artwork.
+   *
+   * A fixed box with `contain`, so the asset never stretches and every unit
+   * occupies the same footprint in a list however wide its own artwork is.
+   */
+  .vehicle-icon {
+    width: 42px;
+    height: 32px;
+    object-fit: contain;
+    display: block;
+  }
+
+  .vehicle-icon-sm {
+    width: 34px;
+    height: 26px;
+    object-fit: contain;
+    display: block;
+  }
+
+  .map-vehicle-icon {
+    width: 34px;
+    height: 28px;
+    object-fit: contain;
+  }
+
   .pill {
     display: inline-flex;
     align-items: center;
