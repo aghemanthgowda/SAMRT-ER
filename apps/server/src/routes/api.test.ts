@@ -465,13 +465,27 @@ describe('reference and operational endpoints', () => {
     expect(byId.maps.detail).toMatch(/No API key/);
   });
 
-  it('reports Google Maps as online only when the client says it has a key', async () => {
+  it('reports Google Maps as online only when the client says it actually loaded', async () => {
     const token = await tokenFor('controller@smart-er.example');
-    const response = await request(app).get('/api/system-status?maps=true').set('authorization', `Bearer ${token}`);
+    const response = await request(app).get('/api/system-status?maps=ready').set('authorization', `Bearer ${token}`);
 
     const maps = response.body.find((service: { id: string }) => service.id === 'maps');
     expect(maps.state).toBe('ONLINE');
     expect(maps.detail).toBe('Connected');
+  });
+
+  it('reports a rejected Maps key as offline rather than connected', async () => {
+    const token = await tokenFor('controller@smart-er.example');
+    const response = await request(app)
+      .get('/api/system-status?maps=unauthorized')
+      .set('authorization', `Bearer ${token}`);
+
+    // A key being configured is not the same as Google accepting it. Reporting
+    // this row green would tell the operator the map works while they look at
+    // an empty grey panel.
+    const maps = response.body.find((service: { id: string }) => service.id === 'maps');
+    expect(maps.state).toBe('OFFLINE');
+    expect(maps.detail).toMatch(/rejected/i);
   });
 
   it('degrades the junction status when a controller goes offline', async () => {

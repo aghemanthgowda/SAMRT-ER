@@ -1,9 +1,11 @@
-import { AlertTriangle, CheckCircle2, ExternalLink, MapPin } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, CheckCircle2, ExternalLink, MapPin, XCircle } from 'lucide-react';
 import { Badge, Card, Field } from '@/components/ui/primitives';
 import { HardwareStatus } from '@/components/panels/HardwareStatus';
+import { ChangePassword } from '@/components/settings/ChangePassword';
 import { SimulationControl } from '@/components/panels/SimulationControl';
 import { ControllerLayout } from '@/components/shell/ControllerLayout';
-import { hasApiKey, readMapsConfig } from '@/maps/loader';
+import { mapsDiagnostics, onMapsHealthChange, readMapsConfig, type MapsDiagnostics } from '@/maps/loader';
 import { useAuthStore } from '@/stores/authStore';
 import { useOpsStore } from '@/stores/opsStore';
 
@@ -14,41 +16,86 @@ import { useOpsStore } from '@/stores/opsStore';
  * Maps key from a browser form would mean the browser could write it — and the
  * key belongs in the deployment, not in application state.
  */
+/**
+ * How each provider state should be presented.
+ *
+ * `no-key` is a warning: nothing is broken, the schematic map is doing its job.
+ * `unauthorized` and `error` are failures — a key was supplied and Google would
+ * not serve it — and must not be shown in the same tone as "not configured",
+ * because the remedy is completely different.
+ */
+const MAPS_PRESENTATION = {
+  ready: {
+    tone: 'ok' as const,
+    title: 'Connected',
+    body: 'Google Maps is the map provider. Routes are drawn on real road geometry with traffic-aware travel times.',
+  },
+  loading: {
+    tone: 'warn' as const,
+    title: 'Connecting',
+    body: 'Waiting for the Maps JavaScript API to load.',
+  },
+  'no-key': {
+    tone: 'warn' as const,
+    title: 'No API key configured',
+    body: 'The console is running on the schematic fallback map. Every operational capability works, but the geography is not real.',
+  },
+  unauthorized: {
+    tone: 'critical' as const,
+    title: 'API key rejected',
+    body: 'Google refused the key, so the console has fallen back to the schematic map.',
+  },
+  error: {
+    tone: 'critical' as const,
+    title: 'Google Maps unreachable',
+    body: 'The Maps JavaScript API could not be loaded, so the console has fallen back to the schematic map.',
+  },
+};
+
+const TONE_CLASS = {
+  ok: { box: 'border-ok-200 bg-ok-50', text: 'text-ok-700', icon: 'text-ok-600' },
+  warn: { box: 'border-warn-200 bg-warn-50', text: 'text-warn-700', icon: 'text-warn-600' },
+  critical: { box: 'border-critical-200 bg-critical-50', text: 'text-critical-700', icon: 'text-critical-600' },
+};
+
 export function SettingsPage() {
   const user = useAuthStore((state) => state.user);
   const config = readMapsConfig();
-  const mapsReady = hasApiKey();
   const simulation = useOpsStore((state) => state.simulation);
   const junctions = useOpsStore((state) => state.junctions.length);
+
+  // Health, not configuration: Google reports a rejected key asynchronously,
+  // so this has to track the provider rather than read an env var once.
+  const [maps, setMaps] = useState<MapsDiagnostics>(() => mapsDiagnostics());
+  useEffect(() => onMapsHealthChange(setMaps), []);
+  useEffect(() => setMaps(mapsDiagnostics()), []);
+
+  const presentation = MAPS_PRESENTATION[maps.health];
+  const tone = TONE_CLASS[presentation.tone];
+  const needsSetup = maps.health === 'no-key';
 
   return (
     <ControllerLayout title="Settings" subtitle="Configuration, hardware and simulation">
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {/* Maps configuration — the one that most often needs attention. */}
         <Card title="Google Maps">
-          <div
-            className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 ${
-              mapsReady ? 'border-ok-200 bg-ok-50' : 'border-warn-200 bg-warn-50'
-            }`}
-          >
-            {mapsReady ? (
-              <CheckCircle2 className="mt-px size-4 shrink-0 text-ok-600" />
+          <div className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 ${tone.box}`}>
+            {presentation.tone === 'ok' ? (
+              <CheckCircle2 className={`mt-px size-4 shrink-0 ${tone.icon}`} />
+            ) : presentation.tone === 'critical' ? (
+              <XCircle className={`mt-px size-4 shrink-0 ${tone.icon}`} />
             ) : (
-              <AlertTriangle className="mt-px size-4 shrink-0 text-warn-600" />
+              <AlertTriangle className={`mt-px size-4 shrink-0 ${tone.icon}`} />
             )}
             <div className="min-w-0">
-              <p className={`text-[13px] font-medium ${mapsReady ? 'text-ok-700' : 'text-warn-700'}`}>
-                {mapsReady ? 'API key configured' : 'No API key configured'}
-              </p>
-              <p className={`mt-0.5 text-[12px] leading-relaxed ${mapsReady ? 'text-ok-700' : 'text-warn-700'}`}>
-                {mapsReady
-                  ? 'Google Maps is the map provider. Routes are drawn on real road geometry with traffic-aware travel times.'
-                  : 'The console is running on the schematic fallback map. Every operational capability works, but the geography is not real.'}
-              </p>
+              <p className={`text-[13px] font-medium ${tone.text}`}>{presentation.title}</p>
+              <p className={`mt-0.5 text-[12px] leading-relaxed ${tone.text}`}>{presentation.body}</p>
+              {/* Google's own diagnosis, when it gave one. */}
+              {maps.message && <p className={`mt-1 text-[12px] leading-relaxed ${tone.text}`}>{maps.message}</p>}
             </div>
           </div>
 
-          {!mapsReady && (
+          {needsSetup && (
             <div className="mt-3 rounded-lg border border-line bg-surface-muted p-3">
               <p className="text-[12.5px] font-medium text-ink-800">To enable Google Maps</p>
               <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[12px] leading-relaxed text-ink-600">
@@ -87,7 +134,15 @@ VITE_GOOGLE_MAPS_VERSION=beta`}
             <Field label="Map ID" value={config.mapId ?? 'Not set (using inline style)'} mono />
             <Field
               label="Routes library"
-              value={config.version === 'beta' ? 'Available on beta' : 'DirectionsService fallback'}
+              value={
+                maps.routesLibrary === 'available'
+                  ? 'Loaded'
+                  : maps.routesLibrary === 'unavailable'
+                    ? 'Not on this channel — DirectionsService fallback'
+                    : config.version === 'beta'
+                      ? 'Published on beta — not yet loaded'
+                      : 'DirectionsService fallback'
+              }
             />
             <Field label="Key source" value="Environment variable" />
           </div>
@@ -110,6 +165,11 @@ VITE_GOOGLE_MAPS_VERSION=beta`}
             Accounts, roles and password hashes are held server-side. This console never receives a credential and
             cannot change a role — authority comes from the account record.
           </p>
+        </Card>
+
+        {/* Security */}
+        <Card title="Password">
+          <ChangePassword />
         </Card>
 
         {/* Network */}

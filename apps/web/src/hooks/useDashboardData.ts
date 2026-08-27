@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { PublicTrafficImpact, ResponseSample, ServiceStatus } from '@smart-er/core';
 import { RequestAbortedError, api, type DashboardHeadline, type OperationalAlert } from '@/api/client';
-import { hasApiKey } from '@/maps/loader';
+import { mapsDiagnostics, onMapsHealthChange } from '@/maps/loader';
 import { useOpsStore } from '@/stores/opsStore';
 
 /**
@@ -41,7 +41,7 @@ export function useDashboardData(days = 7): DashboardData {
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
       const [dashboard, alertList] = await Promise.all([
-        api.dashboard(hasApiKey(), days, signal),
+        api.dashboard(mapsDiagnostics().health, days, signal),
         api.alerts(12, signal),
       ]);
       setHeadline(dashboard.headline);
@@ -78,6 +78,21 @@ export function useDashboardData(days = 7): DashboardData {
       controller.abort();
     };
   }, [requestCount, timelineLength, corridorCount, load]);
+
+  /*
+   * Google reports a rejected key asynchronously, well after the dashboard has
+   * already fetched and reported the provider healthy. Re-fetch when the
+   * verdict arrives, so the status row corrects itself immediately rather than
+   * showing "Connected" over a grey map until the backstop comes round.
+   */
+  useEffect(() => {
+    const controller = new AbortController();
+    const unsubscribe = onMapsHealthChange(() => void load(controller.signal));
+    return () => {
+      unsubscribe();
+      controller.abort();
+    };
+  }, [load]);
 
   // Slow backstop, for the figures that drift without an event — uptime, and
   // the day rolling over in the response history.

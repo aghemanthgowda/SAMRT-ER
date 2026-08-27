@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { hasApiKey, loadMapsLibrary, readMapsConfig, type MapsAvailability } from './loader';
+import {
+  hasApiKey,
+  loadMapsLibrary,
+  mapsDiagnostics,
+  onMapsHealthChange,
+  readMapsConfig,
+  type MapsAvailability,
+} from './loader';
 import { DEFAULT_CENTER, DEFAULT_ZOOM, OPERATIONS_MAP_STYLE } from './mapStyle';
 
 export interface UseGoogleMapResult {
@@ -29,6 +36,24 @@ export function useGoogleMap(options: { center?: google.maps.LatLngLiteral; zoom
   const [availability, setAvailability] = useState<MapsAvailability>(hasApiKey() ? 'loading' : 'unavailable');
   const [error, setError] = useState<string | undefined>();
   const [trafficVisible, setTrafficVisibleState] = useState(true);
+
+  /*
+   * A rejected key is reported after the map has been created, not instead of
+   * it: the script loads, `importLibrary` resolves, the Map constructor
+   * succeeds, and only then does Google call `gm_authFailure` and grey the
+   * tiles out. Watching for it separately is what stops the console reporting
+   * a healthy provider over a blank map.
+   */
+  useEffect(
+    () =>
+      onMapsHealthChange((diagnostics) => {
+        if (diagnostics.health === 'unauthorized' || diagnostics.health === 'error') {
+          setError(diagnostics.message);
+          setAvailability('error');
+        }
+      }),
+    [],
+  );
 
   useEffect(() => {
     if (!hasApiKey()) {
@@ -61,6 +86,9 @@ export function useGoogleMap(options: { center?: google.maps.LatLngLiteral; zoom
 
         mapRef.current = instance;
         setMap(instance);
+        // The hook above may already have seen a rejection while the library
+        // was loading; do not paper over it by declaring the map ready.
+        if (mapsDiagnostics().health === 'unauthorized') return;
         setAvailability('ready');
       } catch (loadError) {
         if (cancelled) return;

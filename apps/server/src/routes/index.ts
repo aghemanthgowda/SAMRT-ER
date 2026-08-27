@@ -10,10 +10,18 @@ import {
 } from '@smart-er/core';
 import { IncidentKind, IncidentStatus, RequestStatus, Role, RouteSource } from '@smart-er/core';
 import { login } from '../auth/auth.js';
+import {
+  ConsolePasswordResetDelivery,
+  PASSWORD_MIN_LENGTH,
+  changePassword,
+  completePasswordReset,
+  requestPasswordReset,
+} from '../auth/passwords.js';
 import { vehicleIdentity, verifyVehicleIdentity } from '../auth/verification.js';
 import { authenticate, requireRole, requireVehicleAccess } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errors.js';
 import { scenarioSummaries } from '../simulation/scenarios.js';
+import { parseMapsHealth } from '../services/analytics.js';
 import type { AppContext } from '../services/context.js';
 
 const latLng = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
@@ -74,6 +82,64 @@ export function buildRouter(context: AppContext): Router {
       });
     }),
   );
+
+  // -- password management --------------------------------------------------
+
+  // Phase 1 delivers reset links to the server log. Swapping in an adapter
+  // that emails or texts them is a change to this one line.
+  const resetDelivery = new ConsolePasswordResetDelivery();
+  const newPassword = z.string().min(1).max(200);
+
+  router.post(
+    '/auth/password/change',
+    auth,
+    asyncHandler(async (req, res) => {
+      const body = z
+        .object({ currentPassword: z.string().min(1), newPassword })
+        .parse(req.body);
+
+      await changePassword(store, req.user!, body.currentPassword, body.newPassword);
+      timeline.record({
+        kind: 'auth.password.changed',
+        message: `${req.user!.displayName} changed their password.`,
+      });
+      res.json({ status: 'changed' });
+    }),
+  );
+
+  /*
+   * Always 202, whatever the address.
+   *
+   * Answering "no such account" here would turn an unauthenticated endpoint
+   * into a way to enumerate who staffs which control room, which is precisely
+   * what removing the account list from the sign-in screen was for.
+   */
+  router.post(
+    '/auth/password/forgot',
+    asyncHandler(async (req, res) => {
+      const body = z.object({ email: z.string().email() }).parse(req.body);
+      await requestPasswordReset(store, body.email, resetDelivery);
+      res.status(202).json({ status: 'accepted' });
+    }),
+  );
+
+  router.post(
+    '/auth/password/reset',
+    asyncHandler(async (req, res) => {
+      const body = z.object({ token: z.string().min(1).max(400), newPassword }).parse(req.body);
+      const user = await completePasswordReset(store, body.token, body.newPassword);
+      timeline.record({
+        kind: 'auth.password.reset',
+        message: `${user.displayName} reset their password using a recovery link.`,
+      });
+      res.json({ status: 'reset' });
+    }),
+  );
+
+  /** What the browser should enforce before submitting. Contains no secrets. */
+  router.get('/auth/password/policy', (_req, res) => {
+    res.json({ minLength: PASSWORD_MIN_LENGTH });
+  });
 
   router.get('/auth/me', auth, (req, res) => {
     const user = req.user!;
@@ -569,15 +635,15 @@ export function buildRouter(context: AppContext): Router {
    * round trip. Kept together because they are always rendered together and
    * four separate requests on every dashboard load is wasteful.
    *
-   * `maps` reports whether the *browser* has a Maps key — the server cannot
-   * see it, so the client states it and the server reflects it back into the
-   * status list rather than guessing.
+   * `maps` reports what the *browser* observed of the map provider — the
+   * server cannot see the key or reach Google on the browser's behalf, so the
+   * client states the outcome and the server reflects it into the status list
+   * rather than guessing from configuration.
    */
   router.get('/dashboard', auth, (req, res) => {
-    const mapsConfigured = req.query.maps === 'true';
     res.json({
       headline: analytics.headline(),
-      systemStatus: analytics.systemStatus(mapsConfigured),
+      systemStatus: analytics.systemStatus(parseMapsHealth(req.query.maps)),
       responseHistory: analytics.responseHistory(
         Math.max(1, Math.min(30, Number.parseInt(String(req.query.days ?? '7'), 10) || 7)),
       ),
@@ -595,7 +661,7 @@ export function buildRouter(context: AppContext): Router {
   });
 
   router.get('/system-status', auth, (req, res) => {
-    res.json(analytics.systemStatus(req.query.maps === 'true'));
+    res.json(analytics.systemStatus(parseMapsHealth(req.query.maps)));
   });
 
   /**

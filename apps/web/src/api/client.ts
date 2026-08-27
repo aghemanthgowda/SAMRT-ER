@@ -26,6 +26,7 @@ import type {
   VehicleState,
   VehicleVerification,
 } from '@smart-er/core';
+import type { MapsHealth } from '@/maps/loader';
 
 /** Same-origin in development (Vite proxies /api), configurable for deployment. */
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
@@ -177,6 +178,15 @@ export const api = {
   login: (email: string, password: string) => post<LoginResult>('/auth/login', { email, password }),
   me: () => get<{ user: User; driver?: Driver; vehicles: Vehicle[]; facility?: Facility }>('/auth/me'),
 
+  // password management. `forgotPassword` resolves the same way whether or not
+  // the address exists, so nothing here can be used to test for an account.
+  passwordPolicy: () => get<{ minLength: number }>('/auth/password/policy'),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    post<{ status: string }>('/auth/password/change', { currentPassword, newPassword }),
+  forgotPassword: (email: string) => post<{ status: string }>('/auth/password/forgot', { email }),
+  resetPassword: (token: string, newPassword: string) =>
+    post<{ status: string }>('/auth/password/reset', { token, newPassword }),
+
   // reference
   network: () => get<{ junctions: Junction[]; roadSegments: RoadSegment[]; junctionStates: JunctionRuntimeState[] }>('/network'),
   facilities: (kind?: string) => get<Facility[]>(`/facilities${kind ? `?kind=${kind}` : ''}`),
@@ -241,18 +251,18 @@ export const api = {
   },
 
   // dashboard, analytics and health
-  dashboard: (mapsConfigured: boolean, days = 7, signal?: AbortSignal) =>
+  dashboard: (maps: MapsHealth, days = 7, signal?: AbortSignal) =>
     get<{
       headline: DashboardHeadline;
       systemStatus: ServiceStatus[];
       responseHistory: ResponseSample[];
       impact: PublicTrafficImpact;
-    }>(`/dashboard?maps=${mapsConfigured}&days=${days}`, signal),
+    }>(`/dashboard?maps=${maps}&days=${days}`, signal),
   responseAnalytics: (days = 7) =>
     get<{ days: number; samples: ResponseSample[]; averageImprovementPercent: number }>(
       `/analytics/response?days=${days}`,
     ),
-  systemStatus: (mapsConfigured: boolean) => get<ServiceStatus[]>(`/system-status?maps=${mapsConfigured}`),
+  systemStatus: (maps: MapsHealth) => get<ServiceStatus[]>(`/system-status?maps=${maps}`),
   alerts: (limit = 20, signal?: AbortSignal) => get<OperationalAlert[]>(`/alerts?limit=${limit}`, signal),
 
   // hardware
