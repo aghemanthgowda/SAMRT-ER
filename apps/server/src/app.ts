@@ -23,8 +23,8 @@ export function createApp(context: AppContext): express.Express {
   );
   app.use(express.json({ limit: '1mb' }));
 
-  // Login is the one endpoint worth rate-limiting hard: everything else is
-  // already behind a token.
+  // The unauthenticated auth endpoints are the ones worth rate-limiting hard:
+  // everything else is already behind a token.
   app.use(
     '/api/auth/login',
     rateLimit({
@@ -33,6 +33,25 @@ export function createApp(context: AppContext): express.Express {
       standardHeaders: 'draft-7',
       legacyHeaders: false,
       message: { error: 'Too many sign-in attempts. Try again shortly.' },
+    }),
+  );
+
+  /*
+   * Recovery is rate-limited harder than sign-in and on a longer window.
+   *
+   * `forgot` sends mail to an address the caller chose, so an open one is both
+   * an enumeration probe and a way to use this server to spam someone.
+   * `reset` accepts a 256-bit token, which is not guessable, but a limit costs
+   * nothing and bounds the attempt rate anyway.
+   */
+  app.use(
+    ['/api/auth/password/forgot', '/api/auth/password/reset'],
+    rateLimit({
+      windowMs: 15 * 60_000,
+      limit: config.isTest ? 1000 : 5,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false,
+      message: { error: 'Too many password recovery attempts. Try again later.' },
     }),
   );
 

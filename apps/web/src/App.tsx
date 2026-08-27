@@ -4,6 +4,8 @@ import { Role } from '@smart-er/core';
 import { Spinner } from '@/components/ui/primitives';
 import { useAuthStore } from '@/stores/authStore';
 import { LoginPage } from '@/pages/LoginPage';
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 import { ControllerApp } from '@/pages/controller/ControllerApp';
 import { DriverApp } from '@/pages/driver/DriverApp';
 import { HospitalApp } from '@/pages/hospital/HospitalApp';
@@ -49,6 +51,8 @@ export function App() {
     return (
       <BrowserRouter>
         <Routes>
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="*" element={<LoginPage />} />
         </Routes>
       </BrowserRouter>
@@ -62,6 +66,13 @@ export function App() {
       <Routes>
         <Route path="/" element={<Navigate to={home} replace />} />
         <Route path="/login" element={<Navigate to={home} replace />} />
+        {/*
+          A recovery link still works while signed in — someone who is already
+          on their console is exactly who follows one, and bouncing them to the
+          dashboard would strand the token in a URL they can no longer use.
+        */}
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         <Route
           path="/controller/*"

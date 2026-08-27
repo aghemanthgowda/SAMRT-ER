@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Radio, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -116,9 +117,9 @@ export function LoginPage() {
             </button>
 
             <div className="text-center">
-              <a href="mailto:support@smart-er.example" className="text-[13px] text-brand-600 hover:underline">
+              <Link to="/forgot-password" className="text-[13px] text-brand-600 hover:underline">
                 Forgot password?
-              </a>
+              </Link>
             </div>
           </form>
         </div>

@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { validatePassword } from '../auth/passwords.js';
 import type {
   Driver,
   Facility,
@@ -36,7 +37,31 @@ import {
  * endpoint that reveals accounts or credentials. Change it — or replace these
  * accounts entirely — before any deployment that matters.
  */
-const SEED_PASSWORD = process.env.SEED_PASSWORD?.trim() || 'ChangeMe!2024';
+const SEED_PASSWORD = resolveSeedPassword();
+
+/**
+ * The seed password has to satisfy the same policy as a chosen one.
+ *
+ * Otherwise a weak SEED_PASSWORD produces accounts whose password the
+ * change-password endpoint would refuse to accept — which is a strange thing
+ * to discover after the accounts already exist. In production a failing value
+ * stops the boot; in development it is reported and the default is used, so a
+ * typo does not leave someone unable to sign in at all.
+ */
+function resolveSeedPassword(): string {
+  const fallback = 'ChangeMe!2024';
+  const configured = process.env.SEED_PASSWORD?.trim();
+  if (!configured) return fallback;
+
+  const problem = validatePassword(configured, { email: 'seed@smart-er.example', displayName: 'Seed' });
+  if (!problem) return configured;
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(`SEED_PASSWORD is not acceptable: ${problem}`);
+  }
+  console.warn(`[seed] SEED_PASSWORD is not acceptable (${problem}) — using the development default instead.`);
+  return fallback;
+}
 
 export interface SeedData {
   users: User[];
