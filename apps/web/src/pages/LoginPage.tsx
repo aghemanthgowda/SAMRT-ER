@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { SmartErMark, SmartErWordmark } from '@/components/brand/SmartErMark';
@@ -27,6 +27,25 @@ import { useAuthStore } from '@/stores/authStore';
 const HERO_IMAGE = '/login-hero.png';
 
 export function LoginPage() {
+  /*
+   * Release the reserved scrollbar gutter for this screen only.
+   *
+   * The document reserves it so that a panel expanding elsewhere in the app
+   * cannot shift every centred element sideways. This screen is a fixed-height
+   * split that never scrolls, so the reservation buys nothing and costs the
+   * two halves their exact 50%: the grid stops 10px short of the viewport and
+   * leaves a strip of canvas beside the white form panel. Restored on unmount,
+   * so everything that does scroll keeps its stable gutter.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    const previous = root.style.scrollbarGutter;
+    root.style.scrollbarGutter = 'auto';
+    return () => {
+      root.style.scrollbarGutter = previous;
+    };
+  }, []);
+
   const login = useAuthStore((state) => state.login);
   const status = useAuthStore((state) => state.status);
   const error = useAuthStore((state) => state.error);
@@ -224,62 +243,74 @@ export function LoginPage() {
  * The image is served from `public/`, not imported, so a missing file is a 404
  * at runtime rather than a build failure — and the branded panel below shows in
  * its place. Drop the artwork at `apps/web/public/login-hero.png` to use it.
- *
- * The artwork is landscape and this panel is a full-height half of the window,
- * which is markedly portrait. `cover` would have to discard a third of the
- * width — and the artwork carries its own logo on the left and an air ambulance
- * on the right, so there is no crop that keeps both.
- *
- * So the image is *contained*: the whole composition is shown, sharp, nothing
- * cut. What would otherwise be empty bands above and below it is filled by the
- * same image, scaled up and blurred out of focus. Because it is the same
- * picture, the blur under the top band is its sky and the blur under the
- * bottom band is its road — the panel fills edge to edge and the seam does not
- * read as one. The browser fetches the file once and paints it twice.
  */
+
+/*
+ * How the hero is fitted.
+ *
+ * The artwork is 1402x1122 (landscape); this panel is half a viewport wide and
+ * full height, so on a 16:9 screen it is markedly portrait. Neither CSS keyword
+ * gets it right on its own:
+ *
+ *   `cover` scales to the panel's height and then has to discard about 30% of
+ *   the width. The composition runs from the logo at x=70 to the air
+ *   ambulance's rotor tip at x=1165 — 1095px of a 1402px frame — and `cover`
+ *   can only show 992 of them. There is no horizontal position that keeps both
+ *   ends; it always cuts the logo or the helicopter.
+ *
+ *   `contain` keeps everything but leaves a third of the panel empty.
+ *
+ * So the image is sized explicitly instead: scaled so that exactly the span
+ * worth keeping fills the panel's width, and anchored to the bottom so the road
+ * meets the panel's edge. What remains above it is sky, and the image's top
+ * edge is a flat rgb(216,231,246) right across, so the panel simply continues
+ * in that colour. No crop through the composition, no distortion, and no seam.
+ */
+const HERO_SPAN = { from: 55, to: 1180, width: 1402 };
+const HERO_VISIBLE = HERO_SPAN.to - HERO_SPAN.from;
+const HERO_FADE = 'linear-gradient(to bottom, transparent 0%, #000 7%)';
+const HERO_STYLE = {
+  width: `${((HERO_SPAN.width / HERO_VISIBLE) * 100).toFixed(2)}%`,
+  left: `${((-HERO_SPAN.from / HERO_VISIBLE) * 100).toFixed(2)}%`,
+  /*
+   * The top edge is dissolved into the panel's sky over a few percent of the
+   * image's height. Matching the colour alone leaves a hairline where the two
+   * meet — the join has to survive PNG quantisation and the browser's own
+   * colour handling, and a fade does that where an exact value cannot. It only
+   * ever eats empty sky.
+   */
+  WebkitMaskImage: HERO_FADE,
+  maskImage: HERO_FADE,
+} as const;
+
+/** The image's own top row, so the sky above it is the same sky. */
+const HERO_SKY = '#d8e7f6';
+
 function HeroPanel() {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
   return (
-    <div className="relative hidden overflow-hidden bg-gradient-to-b from-brand-50 via-surface to-surface-sunken lg:block">
+    <div
+      className="relative hidden overflow-hidden lg:block"
+      style={{ backgroundColor: loaded ? HERO_SKY : undefined }}
+    >
       {!failed && (
-        <>
-          {/* Out-of-focus fill. Decorative: the sharp copy below carries the
-              description, and announcing the same image twice is noise. */}
-          <img
-            src={HERO_IMAGE}
-            alt=""
-            aria-hidden
-            /*
-             * Unscaled and top-anchored, so the fill's top row is the image's
-             * own top row. Zooming it in would show slightly different sky at
-             * the join and leave a visible step where the sharp image begins.
-             */
-            className={`absolute inset-0 size-full object-cover object-top blur-2xl transition-opacity duration-500 ${
-              loaded ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-          <img
-            src={HERO_IMAGE}
-            alt="An ambulance and a fire appliance running a green corridor through city traffic, with an air ambulance overhead"
-            onLoad={() => setLoaded(true)}
-            onError={() => setFailed(true)}
-            /*
-             * Anchored to the bottom, so the road runs to the panel's edge.
-             *
-             * Centred, the image leaves a band above *and* below it, and the
-             * lower one is the worse of the two: it is the blurred road, which
-             * is darker than the sharp road immediately above it, so the seam
-             * shows as a grey strip. Sitting the image on the bottom edge
-             * leaves a single band at the top, where the fill is defocused sky
-             * meeting the image's own sky — a join with nothing to give away.
-             */
-            className={`absolute inset-0 size-full object-contain object-bottom transition-opacity duration-500 ${
-              loaded ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-        </>
+        <img
+          src={HERO_IMAGE}
+          alt="An ambulance and a fire appliance running a green corridor through city traffic, with an air ambulance overhead"
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+          style={HERO_STYLE}
+          /*
+           * `h-auto` rather than a fitted height: the width above already sets
+           * the scale, and letting the height follow the natural ratio is what
+           * guarantees the artwork is never stretched.
+           */
+          className={`absolute bottom-0 h-auto max-w-none transition-opacity duration-500 ${
+            loaded ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
       )}
 
       {/*
@@ -288,7 +319,7 @@ function HeroPanel() {
         is never an empty rectangle.
       */}
       {!loaded && (
-        <div className="relative flex size-full flex-col p-12">
+        <div className="relative flex size-full flex-col bg-gradient-to-b from-brand-50 via-surface to-surface-sunken p-12">
           <div className="flex items-center gap-3.5">
             <SmartErMark className="size-12 text-brand-700" />
             <div>
