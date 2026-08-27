@@ -1,5 +1,5 @@
 import type { VehicleKind } from '@smart-er/core';
-import { vehicleAssetUrl } from '@/lib/vehicleAssets';
+import { getVehicleMapMarker } from '@/lib/vehicleAssets';
 
 /**
  * A vehicle marker is the unit's own artwork, at map scale.
@@ -11,7 +11,7 @@ import { vehicleAssetUrl } from '@/lib/vehicleAssets';
  * one thing on the map that should be instantly recognisable.
  */
 export function vehicleMarkerIcon(kind: VehicleKind): string {
-  return vehicleAssetUrl(kind);
+  return getVehicleMapMarker(kind);
 }
 
 /**

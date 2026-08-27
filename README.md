@@ -316,7 +316,7 @@ npm run dev          # server on :4000 and web on :5173
 npm run dev:server   # server only
 npm run dev:web      # web only
 
-npm test             # 255 tests across all three packages
+npm test             # 261 tests across all three packages
 npm run typecheck
 npm run lint
 npm run build        # production build of all packages
@@ -359,7 +359,7 @@ given a secret of any kind.
 
 ## Testing
 
-255 tests, run with `npm test`.
+261 tests, run with `npm test`.
 
 - **72 core tests** — routing (including that a longer, faster route wins),
   the rolling corridor (including that it never holds the whole route),
@@ -374,7 +374,7 @@ given a secret of any kind.
   supersession, policy, and that the endpoint answers identically for a known
   and an unknown address. Durability is tested by opening a store against a
   real file, closing it, and opening a second one over the same file.
-- **79 web tests** — route comparison, conflict monitor, request queue, the
+- **85 web tests** — route comparison, conflict monitor, request queue, the
   demo map, the status colour contract, the realtime store, the recovery
   screens, and the Maps loader — including that a key Google rejects is
   reported as a failed provider rather than a healthy one.

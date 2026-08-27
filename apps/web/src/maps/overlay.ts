@@ -283,12 +283,13 @@ export class SmartErOverlay {
       const hidden = data.hiddenVehicleIds.has(state.vehicleId);
       const selected = data.selection?.kind === 'vehicle' && data.selection.id === state.vehicleId;
 
-      // 34x28 keeps the marker small enough not to crowd a junction, and the
-      // ratio matches the artwork so nothing is stretched.
+      // A pin points at its position, so it is anchored at the tip rather than
+      // the centre — anchoring a teardrop centrally puts the unit half a marker
+      // north of where it actually is, which at junction scale is a lie.
       const icon = {
         url: vehicleMarkerIcon(vehicle.kind),
-        scaledSize: new google.maps.Size(34, 28),
-        anchor: new google.maps.Point(17, 14),
+        scaledSize: new google.maps.Size(34, 44),
+        anchor: new google.maps.Point(17, 44),
       };
 
       const existing = this.vehicleMarkers.get(state.vehicleId);

@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { CheckCircle2, Plus, Send, Truck } from 'lucide-react';
+import { CheckCircle2, Plus, Send } from 'lucide-react';
 import type { Incident, Severity as SeverityType, Vehicle, VehicleKind } from '@smart-er/core';
 import {
   IncidentKind,
@@ -17,6 +17,7 @@ import { TopBar } from '@/components/shell/TopBar';
 import { useRealtime } from '@/hooks/useRealtime';
 import { useVehicleIndex } from '@/hooks/useVehicleIndex';
 import { SEVERITY_STYLE, VEHICLE_STATUS_STYLE } from '@/lib/status';
+import { VehicleImage } from '@/components/brand/VehicleImage';
 import { OperationsMap } from '@/maps/OperationsMap';
 import { useAuthStore } from '@/stores/authStore';
 import { useOpsStore } from '@/stores/opsStore';
@@ -172,8 +173,8 @@ export function DispatchConsole({ title, vehicleKind, incidentKind, unitNoun }: 
                       className="row-button px-3 py-2"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="flex items-center gap-1.5">
-                          <Truck className="size-3.5 text-ink-500" />
+                        <span className="flex items-center gap-2">
+                          <VehicleImage kind={vehicle.kind} className="vehicle-icon-sm shrink-0" />
                           <span className="tnum font-mono text-xs font-semibold text-ink-900">
                             {vehicle.callSign}
                           </span>

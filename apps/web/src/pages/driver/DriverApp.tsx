@@ -14,7 +14,7 @@ import {
   ShieldAlert,
   Siren,
 } from 'lucide-react';
-import type { Facility, Severity as SeverityType, VehicleVerification } from '@smart-er/core';
+import type { Facility, Severity as SeverityType, VehicleKind, VehicleVerification } from '@smart-er/core';
 import {
   DestinationKind,
   RequestStatus,
@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/primitives';
 import { useRealtime } from '@/hooks/useRealtime';
 import { SEVERITY_STYLE } from '@/lib/status';
 import { useAuthStore } from '@/stores/authStore';
+import { VehicleImage } from '@/components/brand/VehicleImage';
 import { useOpsStore } from '@/stores/opsStore';
 
 /**
@@ -338,7 +339,7 @@ function VerifyScreen({
   busy,
   onSignOn,
 }: {
-  vehicles: { id: string; callSign: string }[];
+  vehicles: { id: string; callSign: string; kind: VehicleKind }[];
   vehicleId?: string;
   onSelect(id: string): void;
   verification?: VehicleVerification;
@@ -379,7 +380,10 @@ function VerifyScreen({
                   : 'border-line bg-surface-muted'
               }`}
             >
-              <span className="tnum font-mono text-sm font-semibold text-ink-900">{vehicle.callSign}</span>
+              <span className="flex items-center gap-2.5">
+                <VehicleImage kind={vehicle.kind} className="vehicle-icon-sm shrink-0" />
+                <span className="tnum font-mono text-sm font-semibold text-ink-900">{vehicle.callSign}</span>
+              </span>
               {vehicleId === vehicle.id && <BadgeCheck className="size-4 text-brand-600" />}
             </button>
           ))}

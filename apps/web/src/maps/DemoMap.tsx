@@ -13,11 +13,11 @@ import type {
 } from '@smart-er/core';
 import { JunctionState, boundsOf } from '@smart-er/core';
 import { JUNCTION_STATE_STYLE, TRAFFIC_STYLE, VEHICLE_KIND_COLOR } from '@/lib/status';
-import { vehicleAssetUrl } from '@/lib/vehicleAssets';
+import { getVehicleMapMarker } from '@/lib/vehicleAssets';
 
-/** Marker footprint on the schematic map, at the artwork's own 48:30 ratio. */
-const MARKER_W = 34;
-const MARKER_H = 21;
+/** Pin footprint on the schematic map, at the pin artwork's 56:72 ratio. */
+const MARKER_W = 30;
+const MARKER_H = 39;
 import type { Selection } from '@/stores/opsStore';
 
 /**
@@ -289,31 +289,20 @@ export function DemoMap(props: DemoMapProps) {
                   by a ring: the position drawn is the last confirmed one, and
                   that has to look different from a live fix.
                 */}
+                {selected && <circle cx={p.x} cy={p.y} r={13} fill={color} opacity={0.18} />}
                 <image
-                  href={vehicleAssetUrl(vehicle.kind)}
+                  href={getVehicleMapMarker(vehicle.kind)}
                   x={p.x - MARKER_W / 2}
-                  y={p.y - MARKER_H / 2}
+                  y={p.y - MARKER_H}
                   width={MARKER_W}
                   height={MARKER_H}
-                  opacity={state.gpsOk ? 1 : 0.55}
+                  opacity={state.gpsOk ? 1 : 0.5}
                   preserveAspectRatio="xMidYMid meet"
                 />
-                {selected && (
-                  <rect
-                    x={p.x - MARKER_W / 2 - 3}
-                    y={p.y - MARKER_H / 2 - 3}
-                    width={MARKER_W + 6}
-                    height={MARKER_H + 6}
-                    rx={6}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth={2}
-                  />
-                )}
 
                 <text
                   x={p.x}
-                  y={p.y - MARKER_H / 2 - 5}
+                  y={p.y - MARKER_H - 5}
                   textAnchor="middle"
                   fontSize={9.5}
                   fontWeight={700}

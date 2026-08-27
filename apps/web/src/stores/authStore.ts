@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Driver, Facility, User } from '@smart-er/core';
+import type { Driver, Facility, User, VehicleKind } from '@smart-er/core';
 import { ApiError, api, setAuthToken } from '@/api/client';
 import { disconnectSocket } from '@/api/socket';
 
@@ -10,7 +10,7 @@ interface AuthState {
   user?: User;
   driver?: Driver;
   facility?: Facility;
-  vehicles: { id: string; callSign: string }[];
+  vehicles: { id: string; callSign: string; kind: VehicleKind }[];
   status: 'idle' | 'restoring' | 'authenticating' | 'authenticated' | 'error';
   error?: string;
 
@@ -68,7 +68,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         user: result.user,
         driver: result.driver,
         facility: result.facility,
-        vehicles: result.vehicles.map((vehicle) => ({ id: vehicle.id, callSign: vehicle.callSign })),
+        vehicles: result.vehicles.map((v) => ({ id: v.id, callSign: v.callSign, kind: v.kind })),
         status: 'authenticated',
         error: undefined,
       });
@@ -101,7 +101,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         user: me.user,
         driver: me.driver,
         facility: me.facility,
-        vehicles: me.vehicles.map((vehicle) => ({ id: vehicle.id, callSign: vehicle.callSign })),
+        vehicles: me.vehicles.map((v) => ({ id: v.id, callSign: v.callSign, kind: v.kind })),
         status: 'authenticated',
       });
     } catch {

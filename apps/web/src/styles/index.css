@@ -225,22 +225,23 @@
    * occupies the same footprint in a list however wide its own artwork is.
    */
   .vehicle-icon {
-    width: 42px;
-    height: 32px;
+    width: 48px;
+    height: 30px;
     object-fit: contain;
     display: block;
   }
 
   .vehicle-icon-sm {
-    width: 34px;
-    height: 26px;
+    width: 38px;
+    height: 24px;
     object-fit: contain;
     display: block;
   }
 
+  /* A pin is taller than it is wide; it points at its position. */
   .map-vehicle-icon {
-    width: 34px;
-    height: 28px;
+    width: 30px;
+    height: 39px;
     object-fit: contain;
   }
 
