@@ -2,6 +2,7 @@ import { computePublicImpact, type OperationalSnapshot } from '@smart-er/core';
 import { isoNow } from '@smart-er/core';
 import type { Store } from '../db/store.js';
 import { EventBus } from '../realtime/bus.js';
+import { AnalyticsService } from './analytics.js';
 import { CorridorRuntime } from './corridorRuntime.js';
 import { DispatchService } from './dispatch.js';
 import { NotificationService } from './notifications.js';
@@ -25,6 +26,7 @@ export interface AppContext {
   timeline: TimelineService;
   dispatch: DispatchService;
   simulation: SimulationEngine;
+  analytics: AnalyticsService;
   snapshot(): OperationalSnapshot;
   shutdown(): Promise<void>;
 }
@@ -37,6 +39,13 @@ export function createContext(store: Store): AppContext {
   const corridors = new CorridorRuntime(store, bus, timeline);
   const dispatch = new DispatchService(store, bus, routing, corridors, notifications, timeline);
   const simulation = new SimulationEngine(store, bus, dispatch, corridors, timeline, routing);
+  const analytics = new AnalyticsService(store, corridors, simulation);
+
+  // Completed runs feed the response-improvement history. Dispatch owns the
+  // lifecycle; analytics only observes, so the two stay independent.
+  dispatch.onCompletion((baselineSeconds, actualSeconds) => {
+    analytics.recordCompletion(baselineSeconds, actualSeconds);
+  });
 
   const snapshot = (): OperationalSnapshot => ({
     serverTime: isoNow(),
@@ -65,6 +74,7 @@ export function createContext(store: Store): AppContext {
     timeline,
     dispatch,
     simulation,
+    analytics,
     snapshot,
     async shutdown() {
       simulation.stop();

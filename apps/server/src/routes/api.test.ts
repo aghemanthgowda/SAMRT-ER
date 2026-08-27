@@ -2,15 +2,21 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Severity } from '@smart-er/core';
 import { createApp } from '../app.js';
-import { DEMO_PASSWORD } from '../db/seed.js';
 import { Store } from '../db/store.js';
 import { createContext, type AppContext } from '../services/context.js';
+
+/**
+ * The password the seed hashes. Set here rather than imported, because the
+ * application deliberately does not export it — nothing outside the seed
+ * should be able to reach a credential.
+ */
+const SEED_PASSWORD = process.env.SEED_PASSWORD ?? 'ChangeMe!2024';
 
 let context: AppContext;
 let app: ReturnType<typeof createApp>;
 
 async function tokenFor(email: string): Promise<string> {
-  const response = await request(app).post('/api/auth/login').send({ email, password: DEMO_PASSWORD });
+  const response = await request(app).post('/api/auth/login').send({ email, password: SEED_PASSWORD });
   expect(response.status).toBe(200);
   return response.body.token as string;
 }
@@ -25,7 +31,7 @@ describe('authentication', () => {
   it('issues a token for valid credentials and returns the driver context', async () => {
     const response = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'ravi.kumar@abc-ems.example', password: DEMO_PASSWORD });
+      .send({ email: 'ravi.kumar@abc-ems.example', password: SEED_PASSWORD });
 
     expect(response.status).toBe(200);
     expect(response.body.token).toBeTypeOf('string');
@@ -40,7 +46,7 @@ describe('authentication', () => {
       .send({ email: 'ravi.kumar@abc-ems.example', password: 'not-the-password' });
     const unknownAddress = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'nobody@example.com', password: DEMO_PASSWORD });
+      .send({ email: 'nobody@example.com', password: SEED_PASSWORD });
 
     expect(wrongPassword.status).toBe(401);
     expect(unknownAddress.status).toBe(401);
@@ -50,7 +56,7 @@ describe('authentication', () => {
   it('never returns a password hash', async () => {
     const response = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'ravi.kumar@abc-ems.example', password: DEMO_PASSWORD });
+      .send({ email: 'ravi.kumar@abc-ems.example', password: SEED_PASSWORD });
 
     const body = JSON.stringify(response.body);
     expect(body).not.toMatch(/\$2[aby]\$/);
@@ -146,6 +152,59 @@ describe('request lifecycle over HTTP', () => {
     expect(detail.body.route.explanation).toBeTypeOf('string');
     expect(detail.body.identity.organization.name).toBe('ABC Emergency Services');
     expect(detail.body.timeline.length).toBeGreaterThan(0);
+  });
+
+  it('lets a crew return to standby after arriving so they can take another call', async () => {
+    const driverToken = await tokenFor('ravi.kumar@abc-ems.example');
+    const controllerToken = await tokenFor('controller@smart-er.example');
+
+    await request(app).post('/api/driver/sign-on').set('authorization', `Bearer ${driverToken}`).send({ vehicleId: 'AMB-01' });
+    const created = await request(app)
+      .post('/api/requests')
+      .set('authorization', `Bearer ${driverToken}`)
+      .send({ vehicleId: 'AMB-01', severity: Severity.CRITICAL, destinationFacilityId: 'FAC-HOSP-01' });
+    await request(app)
+      .post(`/api/requests/${created.body.id}/approve`)
+      .set('authorization', `Bearer ${controllerToken}`)
+      .send({});
+
+    // Run the vehicle to its destination.
+    context.simulation.stop();
+    context.simulation.setSpeed(8);
+    for (let i = 0; i < 200; i += 1) {
+      await context.simulation.tick();
+      if (context.store.vehicleState('AMB-01')?.status === 'ARRIVED') break;
+    }
+    expect(context.store.vehicleState('AMB-01')!.status).toBe('ARRIVED');
+
+    const standby = await request(app)
+      .post('/api/driver/standby')
+      .set('authorization', `Bearer ${driverToken}`)
+      .send({ vehicleId: 'AMB-01' });
+
+    expect(standby.status).toBe(200);
+    expect(standby.body.status).toBe('STANDBY');
+    expect(standby.body.activeRequestId).toBeUndefined();
+
+    // And the unit can immediately take another call.
+    const second = await request(app)
+      .post('/api/requests')
+      .set('authorization', `Bearer ${driverToken}`)
+      .send({ vehicleId: 'AMB-01', severity: Severity.HIGH, destinationFacilityId: 'FAC-HOSP-02' });
+    expect(second.status).toBe(201);
+  });
+
+  it('refuses to return a running unit to standby', async () => {
+    const driverToken = await tokenFor('ravi.kumar@abc-ems.example');
+    await request(app).post('/api/driver/sign-on').set('authorization', `Bearer ${driverToken}`).send({ vehicleId: 'AMB-01' });
+
+    const response = await request(app)
+      .post('/api/driver/standby')
+      .set('authorization', `Bearer ${driverToken}`)
+      .send({ vehicleId: 'AMB-01' });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toMatch(/cannot return to standby/i);
   });
 
   it('rejects a request with no destination', async () => {
@@ -304,6 +363,56 @@ describe('reference and operational endpoints', () => {
     expect(assigned.body.request.status).toBe('PENDING');
   });
 
+  it('reset genuinely restores the network so a scenario can be re-run', async () => {
+    const driverToken = await tokenFor('ravi.kumar@abc-ems.example');
+    const controllerToken = await tokenFor('controller@smart-er.example');
+
+    const before = context.store.vehicleState('AMB-01')!.position;
+
+    // Run AMB-01 somewhere and inject a fault along the way.
+    await request(app).post('/api/driver/sign-on').set('authorization', `Bearer ${driverToken}`).send({ vehicleId: 'AMB-01' });
+    const created = await request(app)
+      .post('/api/requests')
+      .set('authorization', `Bearer ${driverToken}`)
+      .send({ vehicleId: 'AMB-01', severity: Severity.CRITICAL, destinationFacilityId: 'FAC-HOSP-01' });
+    await request(app)
+      .post(`/api/requests/${created.body.id}/approve`)
+      .set('authorization', `Bearer ${controllerToken}`)
+      .send({});
+    await request(app)
+      .post('/api/simulation/fault')
+      .set('authorization', `Bearer ${controllerToken}`)
+      .send({ kind: 'junction', targetId: 'J3', enabled: true });
+    await request(app)
+      .post('/api/simulation/fault')
+      .set('authorization', `Bearer ${controllerToken}`)
+      .send({ kind: 'road', targetId: 'J1-J2', enabled: true });
+
+    context.simulation.stop();
+    context.simulation.setSpeed(8);
+    for (let i = 0; i < 60; i += 1) await context.simulation.tick();
+    expect(context.store.vehicleState('AMB-01')!.position).not.toEqual(before);
+
+    const reset = await request(app)
+      .post('/api/simulation/reset')
+      .set('authorization', `Bearer ${controllerToken}`)
+      .send({});
+    expect(reset.status).toBe(200);
+
+    // The unit is back at its standby post and offline, ready for a fresh run.
+    const state = context.store.vehicleState('AMB-01')!;
+    expect(state.position).toEqual(before);
+    expect(state.status).toBe('OFFLINE');
+    expect(state.activeRouteId).toBeUndefined();
+    expect(state.corridorId).toBeUndefined();
+
+    // Roads reopened, traffic normal, controllers back online.
+    expect(context.store.graph.segments.every((segment) => !segment.blocked)).toBe(true);
+    expect(context.store.repositories.devices.list().every((device) => device.status === 'ONLINE')).toBe(true);
+    expect(context.store.activeCorridors()).toHaveLength(0);
+    expect(context.store.repositories.conflicts.list()).toHaveLength(0);
+  });
+
   it('lists the simulation scenarios with their expected outcomes', async () => {
     const token = await tokenFor('controller@smart-er.example');
     const response = await request(app).get('/api/simulation').set('authorization', `Bearer ${token}`);
@@ -314,6 +423,118 @@ describe('reference and operational endpoints', () => {
       expect(scenario.expectedOutcome).toBeTypeOf('string');
       expect(scenario.steps.length).toBeGreaterThan(0);
     }
+  });
+
+  it('no longer exposes any endpoint that lists accounts or credentials', async () => {
+    const token = await tokenFor('controller@smart-er.example');
+    // Removed deliberately: an endpoint that enumerates accounts is an
+    // information-disclosure surface, authenticated or not.
+    for (const path of ['/api/auth/demo-accounts', '/api/users', '/api/accounts']) {
+      const anonymous = await request(app).get(path);
+      const authenticated = await request(app).get(path).set('authorization', `Bearer ${token}`);
+      expect(anonymous.status).toBe(404);
+      expect(authenticated.status).toBe(404);
+    }
+  });
+
+  it('serves the dashboard summary entirely from derived state', async () => {
+    const token = await tokenFor('controller@smart-er.example');
+    const response = await request(app)
+      .get('/api/dashboard?maps=false&days=7')
+      .set('authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    const { headline, systemStatus, responseHistory } = response.body;
+
+    expect(headline.junctionsTotal).toBeGreaterThan(10);
+    expect(headline.junctionsOnline).toBe(headline.junctionsTotal);
+    expect(headline.activeEmergencies).toBe(0);
+    expect(headline.activeCorridors).toBe(0);
+
+    expect(responseHistory).toHaveLength(7);
+    for (const sample of responseHistory) {
+      expect(sample.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(sample.improvementPercent).toBeGreaterThanOrEqual(0);
+      expect(sample.improvementPercent).toBeLessThanOrEqual(100);
+    }
+
+    // Every service reports a real state, and Maps is honest about not knowing.
+    const byId = Object.fromEntries(systemStatus.map((s: { id: string }) => [s.id, s]));
+    expect(byId.junctions.state).toBe('ONLINE');
+    expect(byId.maps.state).toBe('UNKNOWN');
+    expect(byId.maps.detail).toMatch(/No API key/);
+  });
+
+  it('reports Google Maps as online only when the client says it has a key', async () => {
+    const token = await tokenFor('controller@smart-er.example');
+    const response = await request(app).get('/api/system-status?maps=true').set('authorization', `Bearer ${token}`);
+
+    const maps = response.body.find((service: { id: string }) => service.id === 'maps');
+    expect(maps.state).toBe('ONLINE');
+    expect(maps.detail).toBe('Connected');
+  });
+
+  it('degrades the junction status when a controller goes offline', async () => {
+    const token = await tokenFor('controller@smart-er.example');
+
+    await request(app)
+      .post('/api/simulation/fault')
+      .set('authorization', `Bearer ${token}`)
+      .send({ kind: 'junction', targetId: 'J3', enabled: true });
+
+    const response = await request(app).get('/api/system-status?maps=false').set('authorization', `Bearer ${token}`);
+    const junctions = response.body.find((service: { id: string }) => service.id === 'junctions');
+
+    expect(junctions.state).toBe('DEGRADED');
+    expect(junctions.detail).toMatch(/responding/);
+  });
+
+  it('derives alerts from the real incident timeline', async () => {
+    const driverToken = await tokenFor('ravi.kumar@abc-ems.example');
+    const controllerToken = await tokenFor('controller@smart-er.example');
+
+    await request(app).post('/api/driver/sign-on').set('authorization', `Bearer ${driverToken}`).send({ vehicleId: 'AMB-01' });
+    const created = await request(app)
+      .post('/api/requests')
+      .set('authorization', `Bearer ${driverToken}`)
+      .send({ vehicleId: 'AMB-01', severity: Severity.CRITICAL, destinationFacilityId: 'FAC-HOSP-01' });
+    await request(app)
+      .post(`/api/requests/${created.body.id}/approve`)
+      .set('authorization', `Bearer ${controllerToken}`)
+      .send({});
+
+    const response = await request(app).get('/api/alerts?limit=20').set('authorization', `Bearer ${controllerToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.length).toBeGreaterThan(0);
+    for (const alert of response.body) {
+      expect(['critical', 'warning', 'info']).toContain(alert.severity);
+      expect(alert.message.length).toBeGreaterThan(10);
+      expect(alert.at).toBeTypeOf('string');
+    }
+    // Arming a corridor is a real event and must appear.
+    expect(response.body.some((alert: { kind: string }) => alert.kind === 'corridor.activated')).toBe(true);
+  });
+
+  it('reports which vehicles and junctions are physical rather than simulated', async () => {
+    const token = await tokenFor('controller@smart-er.example');
+
+    const vehicles = await request(app).get('/api/vehicles').set('authorization', `Bearer ${token}`);
+    const amb01 = vehicles.body.find((vehicle: { id: string }) => vehicle.id === 'AMB-01');
+    const amb02 = vehicles.body.find((vehicle: { id: string }) => vehicle.id === 'AMB-02');
+    expect(amb01.provisioning).toBe('PHYSICAL');
+    expect(amb02.provisioning).toBe('SIMULATED');
+
+    const network = await request(app).get('/api/network').set('authorization', `Bearer ${token}`);
+    const byCode = Object.fromEntries(
+      network.body.junctions.map((junction: { code: string; provisioning: string }) => [
+        junction.code,
+        junction.provisioning,
+      ]),
+    );
+    expect(byCode.J1).toBe('PHYSICAL');
+    expect(byCode.J2).toBe('PHYSICAL');
+    expect(byCode.J8).toBe('SIMULATED');
   });
 
   it('returns 404 for an unknown endpoint', async () => {

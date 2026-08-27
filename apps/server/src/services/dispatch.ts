@@ -1,4 +1,6 @@
 import {
+  DEFAULT_CORRIDOR_TUNING,
+  approachConflictMatrix,
   detectConflicts,
   isoAdd,
   nextId,
@@ -65,6 +67,18 @@ export interface SubmitRequestInput {
  * corridor arming, destination notification and completion.
  */
 export class DispatchService {
+  /** Observers notified when a run completes, with baseline and actual seconds. */
+  private readonly completionListeners = new Set<(baselineSeconds: number, actualSeconds: number) => void>();
+
+  /**
+   * Contentions already acted on, keyed by junction and the pair of vehicles.
+   *
+   * The sweep runs continuously, so without this the same J2 conflict would be
+   * re-detected and re-resolved every few seconds — rerouting a vehicle over
+   * and over, and filling the timeline with the same decision.
+   */
+  private readonly handledConflicts = new Set<string>();
+
   constructor(
     private readonly store: Store,
     private readonly bus: EventBus,
@@ -73,6 +87,19 @@ export class DispatchService {
     private readonly notifications: NotificationService,
     private readonly timeline: TimelineService,
   ) {}
+
+  /**
+   * Subscribe to completed runs.
+   *
+   * The payload is the pair the improvement figure is derived from: what the
+   * journey would have taken with no corridor, and what it actually took.
+   */
+  onCompletion(listener: (baselineSeconds: number, actualSeconds: number) => void): () => void {
+    this.completionListeners.add(listener);
+    return () => {
+      this.completionListeners.delete(listener);
+    };
+  }
 
   // -- driver sign-on -------------------------------------------------------
 
@@ -456,7 +483,10 @@ export class DispatchService {
       this.store.graph.junctions.map((junction) => [junction.id, junction.clearanceSeconds]),
     );
 
-    const conflicts = detectConflicts(arrivals, { clearanceByJunctionId }).filter(
+    const conflicts = detectConflicts(arrivals, {
+      clearanceByJunctionId,
+      approachConflictsByJunction: this.approachConflicts(),
+    }).filter(
       (conflict) =>
         conflict.primaryVehicleId === route.vehicleId || conflict.secondaryVehicleId === route.vehicleId,
     );
@@ -464,6 +494,10 @@ export class DispatchService {
     const resolved: Conflict[] = [];
 
     for (const conflict of conflicts) {
+      const key = conflictKey(conflict);
+      if (this.handledConflicts.has(key)) continue;
+      this.handledConflicts.add(key);
+
       this.store.repositories.conflicts.put(conflict);
       this.bus.emit('conflict.detected', conflict);
       this.timeline.record({
@@ -475,13 +509,81 @@ export class DispatchService {
         data: { headwaySeconds: conflict.headwaySeconds },
       });
 
-      const outcome = await this.applyResolution(conflict, corridor, priority);
+      const outcome = await this.applyResolution(conflict);
       if (outcome) resolved.push(outcome);
     }
+    void corridor;
+    void priority;
 
     return resolved;
   }
 
+  /**
+   * Re-check every running corridor for newly-emerged contention.
+   *
+   * Detecting conflicts only at approval is not enough. Two units approved
+   * minutes apart can have arrival windows that do not overlap at the moment
+   * of approval and converge as they travel — traffic slows one, a reroute
+   * shortens the other. By the time they actually meet at the junction it is
+   * too late to reroute anyone.
+   *
+   * Called on a slow cadence from the simulation loop, so contention is found
+   * while there is still time to do something about it.
+   */
+  /** Approach compatibility per junction, rebuilt lazily — the network is static. */
+  private approachMatrix?: ReadonlyMap<string, ReadonlyMap<string, ReadonlySet<string>>>;
+
+  private approachConflicts(): ReadonlyMap<string, ReadonlyMap<string, ReadonlySet<string>>> {
+    this.approachMatrix ??= approachConflictMatrix(this.store.graph.junctions);
+    return this.approachMatrix;
+  }
+
+  async sweepConflicts(): Promise<Conflict[]> {
+    const running = this.store.activeCorridors();
+    if (running.length < 2) {
+      // Nothing can contend; drop the dedupe keys so a later pairing is fresh.
+      this.handledConflicts.clear();
+      return [];
+    }
+
+    const liveVehicles = new Set(running.map((corridor) => corridor.vehicleId));
+    for (const key of [...this.handledConflicts]) {
+      const [, first, second] = key.split(':');
+      // Forget a pairing once either vehicle has finished.
+      if (!liveVehicles.has(first ?? '') || !liveVehicles.has(second ?? '')) {
+        this.handledConflicts.delete(key);
+      }
+    }
+
+    const clearanceByJunctionId = new Map(
+      this.store.graph.junctions.map((junction) => [junction.id, junction.clearanceSeconds]),
+    );
+    const detected = detectConflicts(this.plannedArrivals(), {
+      clearanceByJunctionId,
+      approachConflictsByJunction: this.approachConflicts(),
+    });
+
+    const resolved: Conflict[] = [];
+    for (const conflict of detected) {
+      const key = conflictKey(conflict);
+      if (this.handledConflicts.has(key)) continue;
+      this.handledConflicts.add(key);
+
+      this.store.repositories.conflicts.put(conflict);
+      this.bus.emit('conflict.detected', conflict);
+      this.timeline.record({
+        kind: 'conflict.detected',
+        message: conflict.explanation,
+        junctionId: conflict.junctionId,
+        vehicleId: conflict.secondaryVehicleId,
+        data: { headwaySeconds: conflict.headwaySeconds, source: 'sweep' },
+      });
+
+      const outcome = await this.applyResolution(conflict);
+      if (outcome) resolved.push(outcome);
+    }
+    return resolved;
+  }
   /**
    * Planned junction arrivals for every corridor currently running.
    *
@@ -520,7 +622,7 @@ export class DispatchService {
           arrivalAt: allocation.timeSlotted ? allocation.startsAt : isoAdd(base, remainingSeconds),
           approachId: arrival.approachId,
           priority: allocation.priority,
-          occupancySeconds: 8,
+          occupancySeconds: JUNCTION_HOLD_SECONDS,
         });
       }
     }
@@ -528,11 +630,7 @@ export class DispatchService {
     return arrivals;
   }
 
-  private async applyResolution(
-    conflict: Conflict,
-    corridor: Corridor,
-    priority: number,
-  ): Promise<Conflict | undefined> {
+  private async applyResolution(conflict: Conflict): Promise<Conflict | undefined> {
     const primaryInfo = this.contenderInfo(conflict.primaryVehicleId);
     const secondaryInfo = this.contenderInfo(conflict.secondaryVehicleId);
     if (!primaryInfo || !secondaryInfo) return undefined;
@@ -575,7 +673,7 @@ export class DispatchService {
       },
       secondaryAlternatives: alternatives,
       clearanceSeconds: junction?.clearanceSeconds ?? 6,
-      primaryOccupancySeconds: 8,
+      primaryOccupancySeconds: JUNCTION_HOLD_SECONDS,
     });
 
     this.store.repositories.conflicts.put(outcome.conflict);
@@ -610,8 +708,6 @@ export class DispatchService {
       }
     }
 
-    void corridor;
-    void priority;
     return outcome.conflict;
   }
 
@@ -690,7 +786,12 @@ export class DispatchService {
       await this.corridors.release(previousCorridor, `Corridor for ${vehicleId} retired ahead of a reroute.`);
     }
     if (oldRoute) {
-      this.store.repositories.routes.put({ ...oldRoute, active: false });
+      // Broadcast the retirement. Dashboards filter the map to active routes,
+      // so a route deactivated without an event stays drawn on every screen —
+      // a controller would see a corridor that no longer exists.
+      const retired = { ...oldRoute, active: false };
+      this.store.repositories.routes.put(retired);
+      this.bus.emit('route.updated', retired);
     }
 
     this.store.repositories.routes.put(planned.route);
@@ -760,7 +861,29 @@ export class DispatchService {
     }
     if (state.activeRouteId) {
       const route = this.store.repositories.routes.get(state.activeRouteId);
-      if (route) this.store.repositories.routes.put({ ...route, active: false });
+      if (route) {
+        const retired = { ...route, active: false };
+        this.store.repositories.routes.put(retired);
+        this.bus.emit('route.updated', retired);
+      }
+    }
+
+    // Baseline: the same route with every junction contributing its ordinary
+    // delay — what the run would have cost without a corridor. The route's own
+    // ETA already assumes emergency treatment, so the difference is what the
+    // corridor bought.
+    const route = state.activeRouteId ? this.store.repositories.routes.get(state.activeRouteId) : undefined;
+    const plannedRoute = route ?? (request.routeId ? this.store.repositories.routes.get(request.routeId) : undefined);
+    if (plannedRoute) {
+      const junctionCount = Math.max(1, plannedRoute.junctionIds.length);
+      const baselineSeconds = plannedRoute.etaSeconds + junctionCount * AVERAGE_JUNCTION_DELAY_SECONDS;
+      const actualSeconds = Math.max(
+        1,
+        (new Date(this.store.now()).getTime() - new Date(request.createdAt).getTime()) / 1000,
+      );
+      // A run cut short by a reset would otherwise report an absurd saving.
+      const bounded = Math.min(actualSeconds, baselineSeconds * 1.5);
+      for (const listener of this.completionListeners) listener(baselineSeconds, bounded);
     }
 
     const completed: EmergencyRequest = {
@@ -830,6 +953,96 @@ export class DispatchService {
     });
   }
 
+  /**
+   * Return the whole fleet to its starting state.
+   *
+   * "Reset" has to mean the network is genuinely back to how it started, not
+   * merely that the open requests were cancelled. Vehicles are parked wherever
+   * their last run ended, so without moving them back a second demonstration
+   * begins with units already at their destinations — a request from there is
+   * zero-distance and completes instantly, and the geometry that made the
+   * scenario interesting is gone.
+   */
+  resetFleet(): void {
+    for (const vehicle of this.store.repositories.vehicles.list()) {
+      const state = this.store.vehicleState(vehicle.id);
+      if (!state) continue;
+
+      const reset: VehicleState = {
+        ...state,
+        status: VehicleStatus.OFFLINE,
+        position: vehicle.standbyPosition,
+        heading: 0,
+        speedKph: 0,
+        gpsOk: vehicle.active,
+        gpsAccuracy: 8,
+        driverId: undefined,
+        activeRequestId: undefined,
+        activeRouteId: undefined,
+        corridorId: undefined,
+        etaSeconds: undefined,
+        distanceRemainingM: undefined,
+        nextJunctionId: undefined,
+        updatedAt: this.store.now(),
+      };
+      this.store.repositories.vehicleStates.put(reset);
+      this.store.hardware.gps.setFailed(vehicle.id, false);
+    }
+
+    // Conflict history belongs to the run that produced it.
+    for (const conflict of this.store.repositories.conflicts.list()) {
+      this.store.repositories.conflicts.remove(conflict.id);
+    }
+    this.handledConflicts.clear();
+
+    this.bus.emit('vehicle.states', this.store.repositories.vehicleStates.list());
+    this.timeline.record({
+      kind: 'simulation.reset',
+      message: 'Simulation reset. All units returned to their standby posts and every junction to its normal programme.',
+    });
+  }
+
+  /**
+   * Return a completed unit to standby, ready for its next call.
+   *
+   * Without this a crew that has arrived is stuck: the vehicle sits in ARRIVED
+   * or COMPLETED forever and the handset has nothing to move on to, so the only
+   * way to take a second call is to sign out and back in. A shift does not work
+   * that way.
+   */
+  returnToStandby(vehicleId: string): VehicleState | undefined {
+    const state = this.store.vehicleState(vehicleId);
+    if (!state) return undefined;
+    if (state.status !== VehicleStatus.ARRIVED && state.status !== VehicleStatus.COMPLETED) {
+      throw new DispatchError(
+        `${vehicleId} is ${state.status} and cannot return to standby. Cancel the active request first.`,
+        409,
+      );
+    }
+
+    const updated: VehicleState = {
+      ...state,
+      status: VehicleStatus.STANDBY,
+      activeRequestId: undefined,
+      activeRouteId: undefined,
+      corridorId: undefined,
+      etaSeconds: undefined,
+      distanceRemainingM: undefined,
+      nextJunctionId: undefined,
+      speedKph: 0,
+      updatedAt: this.store.now(),
+    };
+    this.store.repositories.vehicleStates.put(updated);
+    this.bus.emit('vehicle.state', updated);
+
+    this.timeline.record({
+      kind: 'vehicle.standby',
+      message: `${vehicleId} returned to standby and is available for the next call.`,
+      vehicleId,
+    });
+    return updated;
+  }
+
   async cancelRequest(vehicleId: string, reason: string): Promise<void> {
     const request = this.store.repositories.requests.find(
       (entry) => entry.vehicleId === vehicleId && isOpen(entry),
@@ -872,6 +1085,39 @@ export class DispatchService {
     });
   }
 }
+
+/**
+ * How long a corridor actually holds a junction.
+ *
+ * This must match what the corridor engine does, not an idealised figure. That
+ * engine turns a junction green `greenLeadSeconds` before the vehicle arrives
+ * and only releases it once the vehicle is clear, so the real hold is the lead
+ * plus the occupancy — roughly 20 s, not 8.
+ *
+ * Understating it is not a rounding error: the conflict engine concludes two
+ * vehicles are comfortably separated, declines to reroute or time-slot either,
+ * and the second one then arrives to find the junction still held by the first.
+ * The safety validator catches that and refuses the green — correctly — but by
+ * then it is too late to do anything except wait.
+ */
+const JUNCTION_HOLD_SECONDS = DEFAULT_CORRIDOR_TUNING.greenLeadSeconds + DEFAULT_CORRIDOR_TUNING.occupancySeconds;
+
+/**
+ * Stable key for a contention: one junction, one pair of vehicles, in a fixed
+ * order so A-vs-B and B-vs-A are the same conflict.
+ */
+function conflictKey(conflict: Conflict): string {
+  const [first, second] = [conflict.primaryVehicleId, conflict.secondaryVehicleId].sort();
+  return `${conflict.junctionId}:${first}:${second}`;
+}
+
+/**
+ * Delay a vehicle absorbs at a junction it does not hold green.
+ *
+ * Mid-range of the traffic-dependent figures in the road graph. Used only to
+ * form the no-corridor baseline for the improvement statistic.
+ */
+const AVERAGE_JUNCTION_DELAY_SECONDS = 14;
 
 function isOpen(request: EmergencyRequest): boolean {
   return request.status === RequestStatus.PENDING || request.status === RequestStatus.APPROVED;

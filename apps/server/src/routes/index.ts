@@ -15,8 +15,6 @@ import { authenticate, requireRole, requireVehicleAccess } from '../middleware/a
 import { asyncHandler } from '../middleware/errors.js';
 import { scenarioSummaries } from '../simulation/scenarios.js';
 import type { AppContext } from '../services/context.js';
-import { DEMO_PASSWORD } from '../db/seed.js';
-import { config } from '../config.js';
 
 const latLng = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
 
@@ -35,7 +33,7 @@ function param(req: Request, name: string): string {
 
 export function buildRouter(context: AppContext): Router {
   const router = Router();
-  const { store, dispatch, routing, corridors, notifications, timeline, simulation } = context;
+  const { store, dispatch, routing, corridors, notifications, timeline, simulation, analytics } = context;
   const auth = authenticate(store);
 
   // -- health & metadata ----------------------------------------------------
@@ -85,31 +83,6 @@ export function buildRouter(context: AppContext): Router {
       driver,
       vehicles: driver ? driver.authorizedVehicleIds.map((id) => store.vehicle(id)).filter(Boolean) : [],
       facility: user.facilityId ? store.facility(user.facilityId) : undefined,
-    });
-  });
-
-  /**
-   * Demonstration accounts.
-   *
-   * Only exposed outside production, and only ever lists the seeded accounts —
-   * it reads from the seed's role table, never from the credential store.
-   */
-  router.get('/auth/demo-accounts', (_req, res) => {
-    if (config.isProduction) {
-      res.status(404).json({ error: 'Not available.' });
-      return;
-    }
-    res.json({
-      password: DEMO_PASSWORD,
-      accounts: store.repositories.users
-        .find((user) => user.active)
-        .map((user) => ({
-          email: user.email,
-          role: user.role,
-          displayName: user.displayName,
-          facility: user.facilityId ? store.facility(user.facilityId)?.name : undefined,
-          vehicles: user.driverId ? store.driver(user.driverId)?.authorizedVehicleIds : undefined,
-        })),
     });
   });
 
@@ -185,6 +158,22 @@ export function buildRouter(context: AppContext): Router {
     asyncHandler(async (req, res) => {
       const { vehicleId } = signOnSchema.parse(req.body);
       res.json(dispatch.signOff(vehicleId) ?? { ok: true });
+    }),
+  );
+
+  router.post(
+    '/driver/standby',
+    auth,
+    requireRole(Role.DRIVER, Role.CONTROLLER),
+    requireVehicleAccess(store, (req) => (req.body as { vehicleId?: string }).vehicleId),
+    asyncHandler(async (req, res) => {
+      const { vehicleId } = signOnSchema.parse(req.body);
+      const state = dispatch.returnToStandby(vehicleId);
+      if (!state) {
+        res.status(404).json({ error: `Unknown vehicle ${vehicleId}` });
+        return;
+      }
+      res.json(state);
     }),
   );
 
@@ -573,6 +562,100 @@ export function buildRouter(context: AppContext): Router {
     res.json(timeline.recent(200));
   });
 
+  // -- analytics, health and alerts ------------------------------------------
+
+  /**
+   * Everything the dashboard's summary cards and side panels need, in one
+   * round trip. Kept together because they are always rendered together and
+   * four separate requests on every dashboard load is wasteful.
+   *
+   * `maps` reports whether the *browser* has a Maps key — the server cannot
+   * see it, so the client states it and the server reflects it back into the
+   * status list rather than guessing.
+   */
+  router.get('/dashboard', auth, (req, res) => {
+    const mapsConfigured = req.query.maps === 'true';
+    res.json({
+      headline: analytics.headline(),
+      systemStatus: analytics.systemStatus(mapsConfigured),
+      responseHistory: analytics.responseHistory(
+        Math.max(1, Math.min(30, Number.parseInt(String(req.query.days ?? '7'), 10) || 7)),
+      ),
+      impact: computePublicImpact({ junctions: store.graph.junctions, corridors: store.activeCorridors() }),
+    });
+  });
+
+  router.get('/analytics/response', auth, (req, res) => {
+    const days = Math.max(1, Math.min(30, Number.parseInt(String(req.query.days ?? '7'), 10) || 7));
+    res.json({
+      days,
+      samples: analytics.responseHistory(days),
+      averageImprovementPercent: analytics.averageImprovementPercent(days),
+    });
+  });
+
+  router.get('/system-status', auth, (req, res) => {
+    res.json(analytics.systemStatus(req.query.maps === 'true'));
+  });
+
+  /**
+   * Recent operational alerts.
+   *
+   * Derived from the incident timeline rather than stored separately: an alert
+   * is a timeline event a controller would want pulled out of the stream, so
+   * filtering the real record keeps the two from ever disagreeing.
+   */
+  router.get('/alerts', auth, (req, res) => {
+    const limit = Math.max(1, Math.min(100, Number.parseInt(String(req.query.limit ?? '20'), 10) || 20));
+    const notable = new Set([
+      'conflict.detected',
+      'conflict.reroute',
+      'conflict.time_slot',
+      'conflict.priority_hold',
+      'route.rerouted',
+      'corridor.activated',
+      'corridor.released',
+      'junction.green',
+      'safety.rejected',
+      'signal.nack',
+      'signal.abandoned',
+      'gps.lost',
+      'gps.restored',
+      'hardware.offline',
+      'hardware.online',
+      'road.blocked',
+      'road.reopened',
+      'traffic.changed',
+      'incident.reported',
+      'request.rejected',
+    ]);
+
+    const severityOf = (kind: string): 'critical' | 'warning' | 'info' => {
+      if (kind.startsWith('conflict.') || kind.startsWith('safety.') || kind === 'signal.abandoned') return 'critical';
+      if (kind.startsWith('gps.') || kind.startsWith('hardware.') || kind.startsWith('road.') || kind === 'signal.nack') {
+        return 'warning';
+      }
+      return 'info';
+    };
+
+    const alerts = timeline
+      .recent(400)
+      .filter((event) => notable.has(event.kind))
+      .slice(-limit)
+      .reverse()
+      .map((event) => ({
+        id: event.id,
+        at: event.at,
+        kind: event.kind,
+        severity: severityOf(event.kind),
+        message: event.message,
+        vehicleId: event.vehicleId,
+        junctionId: event.junctionId,
+      }));
+
+    res.json(alerts);
+  });
+
   // -- hardware -------------------------------------------------------------
 
   router.get('/hardware', auth, (_req, res) => {
@@ -641,7 +724,22 @@ export function buildRouter(context: AppContext): Router {
         store.graph.setBlocked(segment.id, false);
         store.graph.setTraffic(segment.id, TrafficLevel.NORMAL);
       }
+
+      // Bring every junction controller back online, in case a fault was
+      // injected during the previous run.
+      for (const junction of store.graph.junctions) {
+        store.hardware.signals.setJunctionOffline(junction.id, false);
+        store.hardware.status.setStatus(junction.hardwareDeviceId, 'ONLINE');
+        const device = store.device(junction.hardwareDeviceId);
+        if (device) store.repositories.devices.put({ ...device, status: 'ONLINE' });
+      }
+      corridors.syncDeviceStatus();
+
+      // And park every unit back at its standby post.
+      dispatch.resetFleet();
+
       context.bus.emit('traffic.updated', store.graph.segments);
+      context.bus.emit('hardware.updated', store.repositories.devices.list());
       res.json(simulation.state());
     }),
   );

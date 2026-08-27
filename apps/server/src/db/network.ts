@@ -1,5 +1,15 @@
 import type { Junction, JunctionApproach, LatLng, RoadSegment } from '@smart-er/core';
-import { TrafficLevel } from '@smart-er/core';
+import { Provisioning, TrafficLevel } from '@smart-er/core';
+
+/**
+ * Junctions intended to be driven by real hardware.
+ *
+ * Phase 1 runs every junction on the simulator, so these are still simulated
+ * devices — but the network already knows which two are earmarked for the
+ * Arduino controllers, and the controller dashboard labels them accordingly.
+ * When the hardware arrives the only change is the bundle behind them.
+ */
+const PHYSICAL_JUNCTION_CODES = new Set(['J1', 'J2']);
 
 /**
  * The SMART-ER junction network.
@@ -170,6 +180,7 @@ export function buildJunctions(): Junction[] {
       approaches,
       clearanceSeconds: spec.clearanceSeconds ?? 6,
       averageThroughputVph: spec.throughput,
+      provisioning: PHYSICAL_JUNCTION_CODES.has(spec.code) ? Provisioning.PHYSICAL : Provisioning.SIMULATED,
     };
   });
 }

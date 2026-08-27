@@ -169,9 +169,9 @@ export const SCENARIOS: ScenarioRunner[] = [
 
   scenario(
     'ambulance-fire-conflict',
-    'Ambulance + fire, shared junction',
-    'AMB-01 runs west along MG Road to City General while FIRE-01 is dispatched east to a retail fire at Trinity Circle. The two routes cross at the same junction within one clearance window.',
-    'Conflict detected at the shared junction, a conflict-free alternative computed for the lower-priority unit, and only the contended junction coordinated — the fire appliance is never simply blocked.',
+    'Ambulance + fire, opposing movements',
+    'AMB-01 runs west along MG Road to City General while FIRE-01 is dispatched east to a retail fire at Trinity Circle. The two share every junction on MG Road, but travel in opposite directions.',
+    'Shared junctions that are NOT a conflict: opposing movements run on the same signal phase, so both units are held green together and neither is delayed. The engine only flags contention it would actually have to resolve.',
     [
       { at: 1, action: 'SIGN_ON', vehicleId: 'AMB-01', driverId: 'DRV-001' },
       { at: 2, action: 'SIGN_ON', vehicleId: 'FIRE-01', driverId: 'DRV-003' },
@@ -194,6 +194,38 @@ export const SCENARIOS: ScenarioRunner[] = [
         note: 'Structure fire, occupants evacuating',
       },
       { at: 11, action: 'APPROVE', vehicleCallSign: 'FIRE-01' },
+    ],
+  ),
+
+  scenario(
+    'crossing-conflict',
+    'Crossing movements, shared junction',
+    'A police unit runs north through MG Road / Brigade Road while an ambulance runs west along MG Road. The two cross at the same junction — not head-on, but at right angles, which the junction cannot serve at once.',
+    'A genuine conflict at the shared junction: two movements that physically cannot both be green. SMART-ER looks for a conflict-free alternative for the lower-priority unit first, and only time-slots the junction if rerouting does not help.',
+    [
+      { at: 1, action: 'SIGN_ON', vehicleId: 'POL-02', driverId: 'DRV-004' },
+      { at: 2, action: 'SIGN_ON', vehicleId: 'AMB-01', driverId: 'DRV-001' },
+      { at: 3, action: 'REPORT_INCIDENT', incidentId: 'INC-1002' },
+      {
+        at: 4,
+        action: 'REQUEST',
+        vehicleId: 'POL-02',
+        destinationIncidentId: 'INC-1002',
+        severity: Severity.MEDIUM,
+        note: 'Crowd disturbance, units requested',
+      },
+      { at: 6, action: 'APPROVE', vehicleCallSign: 'POL-02' },
+      // The ambulance is dispatched later, so both reach the shared junction at
+      // roughly the same moment from crossing directions.
+      {
+        at: 62,
+        action: 'REQUEST',
+        vehicleId: 'AMB-01',
+        destinationFacilityId: 'FAC-HOSP-01',
+        severity: Severity.CRITICAL,
+        note: 'Cardiac arrest, 62M',
+      },
+      { at: 64, action: 'APPROVE', vehicleCallSign: 'AMB-01' },
     ],
   ),
 

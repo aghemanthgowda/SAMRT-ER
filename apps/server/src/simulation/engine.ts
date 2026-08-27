@@ -19,6 +19,13 @@ import type { TimelineService } from '../services/timeline.js';
 import { SCENARIOS, type ScenarioRunner } from './scenarios.js';
 
 /**
+ * How often running corridors are re-checked for contention, in simulated
+ * seconds. Frequent enough to find a conflict while a reroute is still useful,
+ * infrequent enough that the k-shortest-path search is not run every tick.
+ */
+const CONFLICT_SWEEP_INTERVAL_SECONDS = 5;
+
+/**
  * The simulation.
  *
  * In Phase 1 this stands in for the physical world: it moves vehicles along
@@ -41,6 +48,8 @@ export class SimulationEngine {
   private readonly manualGps = new Set<string>();
   /** Last reroute per vehicle, so the system does not oscillate. */
   private readonly lastRerouteAt = new Map<string, number>();
+  /** Simulated seconds since the last conflict sweep. */
+  private secondsSinceConflictSweep = 0;
 
   constructor(
     private readonly store: Store,
@@ -150,6 +159,15 @@ export class SimulationEngine {
     await this.moveVehicles(deltaSeconds);
     this.varyTraffic();
     await this.considerReroutes();
+
+    // Contention between running corridors is re-checked continuously, not
+    // only at approval: two units approved minutes apart can have arrival
+    // windows that converge as traffic changes.
+    this.secondsSinceConflictSweep += deltaSeconds;
+    if (this.secondsSinceConflictSweep >= CONFLICT_SWEEP_INTERVAL_SECONDS) {
+      this.secondsSinceConflictSweep = 0;
+      await this.dispatch.sweepConflicts();
+    }
 
     this.store.hardware.status.sweep();
     this.corridors.syncDeviceStatus();

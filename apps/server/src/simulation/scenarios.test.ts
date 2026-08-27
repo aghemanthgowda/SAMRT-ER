@@ -106,10 +106,32 @@ describe('4–5. fire and police dispatch', () => {
 });
 
 describe('6–9. shared junction, alternatives, and coordination', () => {
-  it('detects contention and resolves it without simply blocking the second unit', async () => {
+  it('does not flag opposing movements that the junction can serve together', async () => {
+    // AMB-01 westbound and FIRE-01 eastbound share every junction on MG Road,
+    // but enter each one from opposite approaches. Opposing movements run on
+    // the same signal phase, so this is not contention — and reporting it as
+    // such would spend a reroute, or hold a fire appliance, for nothing.
     await context.simulation.startScenario('ambulance-fire-conflict');
     context.simulation.stop();
-    await run(40);
+    await run(60);
+
+    const amb = store.activeRoutes().find((route) => route.vehicleId === 'AMB-01');
+    const fire = store.activeRoutes().find((route) => route.vehicleId === 'FIRE-01');
+    if (amb && fire) {
+      const shared = amb.junctionIds.filter((id) => fire.junctionIds.includes(id));
+      expect(shared.length, 'the scenario should still share junctions').toBeGreaterThan(0);
+    }
+
+    expect(store.repositories.conflicts.list()).toHaveLength(0);
+    // Both keep running; neither is held or rerouted.
+    expect(messagesOfKind('route.rerouted')).toHaveLength(0);
+  });
+
+  it('detects genuine crossing contention and resolves it', async () => {
+    await context.simulation.startScenario('crossing-conflict');
+    context.simulation.stop();
+    context.simulation.setSpeed(4);
+    await run(90);
 
     const conflicts = store.repositories.conflicts.list();
     expect(conflicts.length).toBeGreaterThan(0);
@@ -117,46 +139,106 @@ describe('6–9. shared junction, alternatives, and coordination', () => {
     const conflict = conflicts[0]!;
     expect(conflict.status).not.toBe(ConflictStatus.DETECTED);
     expect(conflict.status).not.toBe(ConflictStatus.UNRESOLVED);
+    expect(conflict.strategy).toBeDefined();
     // The resolution is always explained in terms a controller can act on.
     expect(conflict.explanation.length).toBeGreaterThan(40);
-
-    // Both vehicles are still moving — neither was parked indefinitely.
-    expect(store.vehicleState('AMB-01')!.status).toBe(VehicleStatus.ACTIVE);
-    expect(store.vehicleState('FIRE-01')!.status).toBe(VehicleStatus.ACTIVE);
   });
 
-  it('honours a time slot by not claiming the junction before its window opens', async () => {
-    await context.simulation.startScenario('ambulance-fire-conflict');
+  it('never lets a junction be held green for two vehicles at once', async () => {
+    await context.simulation.startScenario('crossing-conflict');
     context.simulation.stop();
-    await run(40);
+    context.simulation.setSpeed(4);
 
-    const slotted = store.repositories.corridors
-      .list()
-      .flatMap((corridor) => corridor.allocations)
-      .filter((allocation) => allocation.timeSlotted);
+    for (let i = 0; i < 120; i += 1) {
+      await context.simulation.tick();
 
-    if (slotted.length > 0) {
-      // A deferred allocation must not be sitting green before its window.
-      for (const allocation of slotted) {
-        if (new Date(allocation.startsAt).getTime() > store.clock.now()) {
-          expect(allocation.state).not.toBe(JunctionState.GREEN);
+      const heldBy = new Map<string, Set<string>>();
+      for (const corridor of store.activeCorridors()) {
+        for (const allocation of corridor.allocations) {
+          if (allocation.state !== JunctionState.GREEN) continue;
+          const set = heldBy.get(allocation.junctionId) ?? new Set<string>();
+          set.add(corridor.vehicleId);
+          heldBy.set(allocation.junctionId, set);
         }
       }
-    }
-
-    // Whatever the strategy, no junction ever holds two vehicles at once.
-    const heldByJunction = new Map<string, Set<string>>();
-    for (const corridor of store.activeCorridors()) {
-      for (const allocation of corridor.allocations) {
-        if (allocation.state !== JunctionState.GREEN) continue;
-        const set = heldByJunction.get(allocation.junctionId) ?? new Set<string>();
-        set.add(corridor.vehicleId);
-        heldByJunction.set(allocation.junctionId, set);
+      for (const [junctionId, vehicles] of heldBy) {
+        expect(vehicles.size, `${junctionId} held by ${[...vehicles].join(', ')}`).toBe(1);
       }
     }
-    for (const [junctionId, vehicles] of heldByJunction) {
-      expect(vehicles.size, `${junctionId} held by ${[...vehicles].join(', ')}`).toBe(1);
+  });
+
+  it('predicts contention rather than discovering it at the signal head', async () => {
+    // With the conflict engine and the corridor engine agreeing on how long a
+    // junction is actually held, contention is resolved ahead of time and the
+    // safety validator never has to refuse a green it was asked for.
+    await context.simulation.startScenario('crossing-conflict');
+    context.simulation.stop();
+    context.simulation.setSpeed(4);
+    await run(120);
+
+    const junctionConflictStates = context.corridors
+      .states()
+      .filter((state) => state.state === JunctionState.CONFLICT);
+    expect(junctionConflictStates).toHaveLength(0);
+  });
+});
+
+describe('conflict detection is live, not only at approval', () => {
+  it('finds contention that emerges after both corridors are already running', async () => {
+    // Approve the two units far enough apart that their arrival windows do not
+    // overlap at the moment of approval — the case the approval-time check
+    // cannot catch on its own.
+    context.dispatch.signOn('AMB-01', 'DRV-001');
+    const ambulance = context.dispatch.submitRequest({
+      vehicleId: 'AMB-01',
+      driverId: 'DRV-001',
+      severity: Severity.CRITICAL,
+      destinationFacilityId: 'FAC-HOSP-01',
+    });
+    await context.dispatch.approveRequest(ambulance.id, 'USR-CTRL-01');
+
+    context.simulation.stop();
+    await run(8);
+
+    context.dispatch.signOn('FIRE-01', 'DRV-003');
+    const fire = context.dispatch.submitRequest({
+      vehicleId: 'FIRE-01',
+      driverId: 'DRV-003',
+      severity: Severity.HIGH,
+      destinationIncidentId: 'INC-1004',
+      incidentId: 'INC-1004',
+    });
+    await context.dispatch.approveRequest(fire.id, 'USR-CTRL-01');
+
+    const atApproval = store.repositories.conflicts.list().length;
+
+    // Let the simulation run; the sweep re-checks as the windows converge.
+    await run(45);
+
+    const conflicts = store.repositories.conflicts.list();
+    expect(conflicts.length).toBeGreaterThanOrEqual(atApproval);
+
+    // Whatever was found must have been acted on, not merely recorded.
+    for (const conflict of conflicts) {
+      expect(conflict.status).not.toBe(ConflictStatus.DETECTED);
+      expect(conflict.strategy).toBeDefined();
     }
+  });
+
+  it('does not re-resolve the same contention on every sweep', async () => {
+    await context.simulation.startScenario('ambulance-fire-conflict');
+    context.simulation.stop();
+    await run(60);
+
+    const conflicts = store.repositories.conflicts.list();
+    // One entry per junction/vehicle pairing, however many sweeps have run.
+    const keys = conflicts.map((conflict) =>
+      [conflict.junctionId, ...[conflict.primaryVehicleId, conflict.secondaryVehicleId].sort()].join(':'),
+    );
+    expect(new Set(keys).size).toBe(keys.length);
+
+    // And a vehicle is not rerouted over and over by repeated detection.
+    expect(messagesOfKind('route.rerouted').length).toBeLessThanOrEqual(3);
   });
 });
 

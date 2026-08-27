@@ -15,6 +15,7 @@ import {
   HardwareMode,
   IncidentKind,
   IncidentStatus,
+  Provisioning,
   Role,
   Severity,
   VehicleKind,
@@ -29,11 +30,13 @@ import {
  * different operators, a fire appliance, two police units, and the facilities
  * that receive them.
  *
- * Every account uses the same development password. That is safe only because
- * this is seed data for a simulation; the server refuses to start in production
- * without a real JWT secret, and these accounts are intended to be replaced.
+ * The seed password is read from SEED_PASSWORD, falling back to a development
+ * default. It is hashed with bcrypt before it reaches a repository, is never
+ * exported from this module, and is never sent to a client: the API has no
+ * endpoint that reveals accounts or credentials. Change it — or replace these
+ * accounts entirely — before any deployment that matters.
  */
-export const DEMO_PASSWORD = 'smarter2024';
+const SEED_PASSWORD = process.env.SEED_PASSWORD?.trim() || 'ChangeMe!2024';
 
 export interface SeedData {
   users: User[];
@@ -49,7 +52,7 @@ export interface SeedData {
 
 export function buildSeed(): SeedData {
   const now = isoNow();
-  const hash = bcrypt.hashSync(DEMO_PASSWORD, 10);
+  const hash = bcrypt.hashSync(SEED_PASSWORD, 10);
 
   // -- organizations --------------------------------------------------------
   const organizations: Organization[] = [
@@ -161,6 +164,8 @@ export function buildSeed(): SeedData {
       /** Trinity Circle standby post. */
       standbyPosition: { lat: 12.97245, lng: 77.61686 },
       cruisingSpeedKph: 52,
+      // The prototype ambulance carries the real ESP32 unit in Phase 2.
+      provisioning: Provisioning.PHYSICAL,
       active: true,
     },
     {
@@ -174,6 +179,7 @@ export function buildSeed(): SeedData {
       /** Ulsoor Lake standby post. */
       standbyPosition: { lat: 12.98126, lng: 77.61887 },
       cruisingSpeedKph: 50,
+      provisioning: Provisioning.SIMULATED,
       active: true,
     },
     {
@@ -187,6 +193,7 @@ export function buildSeed(): SeedData {
       /** Central Fire Station apron. */
       standbyPosition: { lat: 12.97831, lng: 77.60663 },
       cruisingSpeedKph: 44,
+      provisioning: Provisioning.SIMULATED,
       active: true,
     },
     {
@@ -200,6 +207,7 @@ export function buildSeed(): SeedData {
       /** Police HQ yard. */
       standbyPosition: { lat: 12.96842, lng: 77.59346 },
       cruisingSpeedKph: 58,
+      provisioning: Provisioning.SIMULATED,
       active: true,
     },
     {
@@ -213,6 +221,7 @@ export function buildSeed(): SeedData {
       /** Double Road patrol post. */
       standbyPosition: { lat: 12.96395, lng: 77.60417 },
       cruisingSpeedKph: 58,
+      provisioning: Provisioning.SIMULATED,
       active: true,
     },
     {
@@ -227,6 +236,7 @@ export function buildSeed(): SeedData {
       /** Depot. */
       standbyPosition: { lat: 12.96594, lng: 77.58873 },
       cruisingSpeedKph: 48,
+      provisioning: Provisioning.SIMULATED,
       active: false,
     },
   ];
@@ -354,6 +364,7 @@ export function buildSeed(): SeedData {
   const devices: HardwareDevice[] = vehicles.map((vehicle) => ({
     id: vehicle.hardwareDeviceId,
     kind: DeviceKind.VEHICLE_UNIT,
+    provisioning: vehicle.provisioning,
     serial: vehicle.hardwareDeviceId,
     mode: HardwareMode.SIMULATED,
     status: vehicle.active ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
