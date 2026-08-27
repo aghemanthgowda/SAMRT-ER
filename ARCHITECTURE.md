@@ -141,15 +141,28 @@ unit. Incumbency stops the system thrashing a corridor it has just armed.
 ## Conflict detection and resolution
 
 A conflict is **not** "two routes share a junction". Two ambulances thirty
-minutes apart share junctions all day. A conflict exists only when both
-vehicles need the junction inside one clearance window:
+minutes apart share junctions all day, and two units crossing the same junction
+head-on need the same signal phase, so serving both at once costs nothing. Two
+conditions have to hold together.
+
+**First, the movements must be physically incompatible.** Each allocation
+records the approach the vehicle enters on. `approachConflictMatrix()` derives,
+per junction, which approaches can be green simultaneously: opposing movements
+share a phase, crossing movements do not. Allocations on compatible approaches
+are dismissed before any arithmetic — the pair is not contention, it is one
+green serving two vehicles.
+
+**Second, the arrivals must overlap** inside one clearance window:
 
 ```
   headway = (arrival₂ − arrival₁) − occupancy₁ − clearance
 ```
 
 Negative headway is a conflict, and its magnitude is exactly the shortfall to
-be absorbed.
+be absorbed. Occupancy is the same `greenLead + occupancy` figure the corridor
+runtime actually holds a junction for, so prediction and runtime agree; when
+they disagree, contention arrives at the signal head undetected and the
+junction has to refuse it.
 
 Resolution, in strict order of preference:
 
@@ -170,6 +183,13 @@ Every outcome carries a prose explanation naming the junction, both units, the
 alternatives considered and the seconds saved or lost. It is rendered verbatim
 in the conflict monitor, because "the system rerouted the fire appliance" is
 not something a controller can defend afterwards.
+
+Detection does not only run at approval. Routes drift: traffic changes, a
+vehicle is delayed, a reroute moves an arrival. The simulation re-sweeps every
+active route pair every five seconds and resolves anything new, keyed so an
+already-handled contention is not re-reported on each pass. A conflict that
+did not exist when both corridors were granted is still a conflict when it
+appears.
 
 ---
 
@@ -266,6 +286,39 @@ one timebase at any speed.
 
 ---
 
+## Identity and authentication
+
+Two chains, deliberately separate.
+
+**Operators** authenticate with an email address and a password. Passwords are
+stored as bcrypt hashes; the plaintext exists only for as long as it takes to
+compare it. The token that comes back carries the user's id and role, and the
+role is read from the user record on every request — the browser can ask for
+any screen it likes, but authorisation is decided server-side against the
+stored role, never against a claim the client makes.
+
+Nothing in the API will enumerate accounts. There is no endpoint that lists
+users, returns a password or a hash, or reveals which addresses exist; a failed
+sign-in gives the same answer whether the address is unknown or the password is
+wrong. The sign-in screen therefore cannot display accounts or hints, because
+there is nothing for it to display. A test asserts each of those endpoints
+stays absent.
+
+**Vehicles** authenticate through the identity chain:
+
+```
+  driver → licence → vehicle → organization → telemetry unit
+```
+
+Every link is checked before a corridor is granted, and a break in any of them
+is a refusal that names the link that failed. A signed-on driver is not
+sufficient: the driver has to be authorised for *that* vehicle, the vehicle's
+organization has to be active, and the vehicle's telemetry unit has to be
+reporting. This is what makes an unauthorised sign-on a routing decision rather
+than a login error.
+
+---
+
 ## Realtime
 
 One Socket.IO channel carries all operational state. Clients authenticate with
@@ -282,6 +335,30 @@ at a time, and rebuilding an array on every vehicle tick would re-render every
 row in the console. Derived views are exposed as hooks wrapped in `useShallow`
 for the same reason — a selector returning a fresh array on every store
 notification re-renders continuously and can drive React into an update loop.
+
+---
+
+## Derived figures
+
+The dashboard shows totals, counts and a response-improvement trend. None of
+them is a constant in the interface. Every figure the operator reads is
+computed from live state at the moment it is rendered — active emergencies from
+the route table, junctions online from controller health, units linked from the
+identity chain — and the interface's job is only to display it.
+
+`services/analytics.ts` owns the two figures that need history rather than a
+snapshot. Each completed run reports its baseline ETA (what the trip would have
+taken without a corridor) and its actual duration; the difference is that run's
+improvement, and the service keeps a day-bucketed series alongside a seeded
+fortnight so the trend has a shape on a freshly-started system.
+
+A day with no completed runs is a gap, not a zero. The chart breaks the line
+across it and marks the axis tick hollow, because drawing 0% would read as
+"the system saved nothing that day" rather than "nothing ran".
+
+`systemStatus()` derives its rows the same way, and reports the map provider as
+unknown rather than healthy when the browser has no API key — a component that
+cannot be reached is not a component that is working.
 
 ---
 
@@ -313,7 +390,15 @@ acknowledgement latency, command rejection, watchdog expiry and GPS dropout —
 and each of those has a corresponding behaviour above the line and a test that
 exercises it.
 
+Vehicles and junction controllers each carry a `Provisioning` value —
+`PHYSICAL` or `SIMULATED` — so the distinction is a property of the record
+rather than of the deployment. Phase 1 seeds one physically-provisioned unit
+alongside simulated ones precisely so the interface has to render the
+difference before any hardware exists; the dashboard badges it on the unit, and
+system status counts the two populations separately.
+
 Phase 2 adds `createEsp32Hardware(...)` returning the same `HardwareBundle`.
 The bundle can mix implementations, so hardware comes up one junction at a time
-on a live system. See [PROTOCOL.md](PROTOCOL.md) for the wire format, the
+on a live system, and a `PHYSICAL` record is what tells the operator which
+junctions those are. See [PROTOCOL.md](PROTOCOL.md) for the wire format, the
 firmware safety requirements and the bring-up sequence.

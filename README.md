@@ -25,8 +25,16 @@ cp .env.example .env      # optional — the system runs without a Maps key
 npm run dev
 ```
 
-Open <http://localhost:5173> and sign in. The sign-in screen lists every
-demonstration account; the development password is shown next to them.
+Open <http://localhost:5173> and sign in.
+
+### Accounts
+
+Operator accounts live in the database, not in the interface. The sign-in
+screen shows no account list, no password and no role picker — the API has no
+endpoint that would supply them, and the authenticated role comes from the
+user record rather than from anything the browser asserts.
+
+On first boot the server seeds one account per role. Their addresses are:
 
 | Role | Account | What it is |
 | --- | --- | --- |
@@ -37,6 +45,17 @@ demonstration account; the development password is shown next to them.
 | Fire | `watch@bfes.example` | Central Fire Station watch room |
 | Police | `control@bcp.example` | Police HQ control room |
 
+Every seeded account is given the value of `SEED_PASSWORD`, bcrypt-hashed
+before it is stored. Set it in `.env` before you start:
+
+```bash
+SEED_PASSWORD=pick-your-own
+```
+
+Unset, it falls back to a development default so a fresh clone still runs.
+Change it before exposing the server beyond your own machine — and note that
+the seed only applies to a database that has no users yet.
+
 The driver screens are mobile-first — open them on a phone, or in a narrow
 browser window.
 
@@ -44,9 +63,9 @@ browser window.
 
 ## The five-minute demonstration
 
-1. Sign in as the **controller**.
-2. Open the **Simulation** tab along the bottom of the console.
-3. Start **"Ambulance + fire, shared junction"**.
+1. Sign in as the **controller**. The dashboard opens on live network state.
+2. Go to **Settings** in the sidebar and find **Simulation**.
+3. Start **"Crossing movements, shared junction"**.
 
 What to watch, in order:
 
@@ -60,11 +79,17 @@ What to watch, in order:
 - **The corridor rolls.** Watch the junction network strip: exactly one
   junction green, one preparing ahead of it, everything behind released. Never
   the whole route.
-- **FIRE-01 is dispatched** to a fire at Trinity Circle, and its route crosses
-  AMB-01's. The conflict monitor shows the contention detected at the shared
-  junction, and what SMART-ER did about it — in prose, with the numbers.
+- **POL-02 crosses AMB-01's route at right angles.** The conflict monitor shows
+  the contention detected at the shared junction, and what SMART-ER did about
+  it — in prose, with the numbers. Only the one contended junction is
+  time-slotted; the rest of both corridors run untouched.
 - **Public traffic impact** stays at one or two junctions out of fourteen
   throughout. That figure is the argument for the rolling window.
+
+Contrast it with **"Ambulance + fire, opposing movements"**, where two units
+share every junction on MG Road and none of them is a conflict: opposing
+movements run on the same signal phase, so both are held green together. The
+engine flags only contention it would actually have to resolve.
 
 Other scenarios worth running: **Road closure mid-run** (automatic reroute with
 the reason recorded), **GPS loss mid-corridor** (the corridor holds the last
@@ -189,15 +214,22 @@ packages/core/          domain model and decision engines — no I/O, no framewo
 apps/server/            Express + Socket.IO
   db/                   junction network, seed data, repositories
   auth/                 authentication and the vehicle identity chain
-  services/             dispatch, routing, corridor runtime, notifications
+  services/             dispatch, routing, corridor runtime, analytics,
+                        notifications
   simulation/           tick loop and demonstration scenarios
   realtime/             event bus and socket gateway
   routes/               REST API
 
 apps/web/               React + Vite
   maps/                 Google Maps loader, Routes service, overlay, demo map
-  components/           console panels and primitives
-  pages/                controller, driver, hospital, fire, police
+  components/shell/     sidebar, page header, controller layout
+  components/dashboard/ stat cards, active emergencies, queue, alerts,
+                        system status, response chart
+  components/panels/    operational panels shared across consoles
+  hooks/                dashboard data fetching
+  pages/controller/     dashboard, map, requests, vehicles, junctions,
+                        incidents, alerts, reports, settings
+  pages/                driver, hospital, fire, police
   stores/               auth and realtime operational state
 ```
 
@@ -210,7 +242,7 @@ npm run dev          # server on :4000 and web on :5173
 npm run dev:server   # server only
 npm run dev:web      # web only
 
-npm test             # 161 tests across all three packages
+npm test             # 179 tests across all three packages
 npm run typecheck
 npm run lint
 npm run build        # production build of all packages
@@ -234,6 +266,7 @@ with none of them set.
 | `VITE_GOOGLE_MAPS_MAP_ID` | Optional cloud-styled Map ID |
 | `PORT`, `HOST` | Server bind address |
 | `JWT_SECRET` | Token signing secret — **required in production** |
+| `SEED_PASSWORD` | Password given to seeded accounts, bcrypt-hashed on write |
 | `CORS_ORIGIN` | Allowed browser origins |
 | `SIM_TICK_MS`, `SIM_SPEED` | Simulation cadence |
 | `VITE_API_BASE_URL` | API base URL as seen from the browser |
@@ -242,21 +275,27 @@ No key is ever hard-coded. `.env` is git-ignored; only `.env.example` is
 committed. In production the server refuses to start without a real
 `JWT_SECRET` rather than falling back to a constant.
 
+Passwords are stored as bcrypt hashes and nothing else. No API response
+contains a password, a hash, or a list of accounts, and the browser is never
+given a secret of any kind.
+
 ---
 
 ## Testing
 
-161 tests, run with `npm test`.
+179 tests, run with `npm test`.
 
-- **69 core tests** — routing (including that a longer, faster route wins),
+- **72 core tests** — routing (including that a longer, faster route wins),
   the rolling corridor (including that it never holds the whole route),
-  conflict detection and each resolution strategy, the safety validator's
+  conflict detection and each resolution strategy — including that opposing
+  movements through one junction are *not* a conflict — the safety validator's
   refusals, the public impact model, geometry, and simulated hardware
   including its failure modes.
-- **51 server tests** — the nineteen scenarios from the specification driven
-  end to end through the real services, plus authentication, authorization and
-  the REST surface.
-- **41 web tests** — route comparison, conflict monitor, request queue, the
+- **64 server tests** — the nineteen scenarios from the specification driven
+  end to end through the real services, plus authentication, authorization,
+  the REST surface, and that no endpoint will enumerate accounts or return a
+  password.
+- **43 web tests** — route comparison, conflict monitor, request queue, the
   demo map, the Maps loader, the status colour contract and the realtime store.
 
 ---
