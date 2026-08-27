@@ -192,6 +192,39 @@ database is rebuilt from the seed on each cold start. Accounts come back;
 password changes and run history do not. Attach a disk mounted at the value of
 `DATABASE_PATH` to keep them.
 
+### Vercel
+
+Vercel hosts the web app, not the whole system. The server holds one ticking
+simulation and its SQLite database in a single process, and every connected
+device has to reach *that* process to see the same corridor. Vercel runs
+request-scoped functions that scale to several instances and are not guaranteed
+to be the same one twice, with no writable disk and nothing running between
+requests — so the API belongs on a host that keeps a process alive, and the
+Render service above is the obvious one.
+
+Split that way it works well, because serving a static bundle is what Vercel is
+good at. Deploy the API first, then on Vercel **Add New → Project**, import this
+repository, and set one environment variable:
+
+```
+VITE_API_BASE_URL = https://your-api-host.onrender.com
+```
+
+`vercel.json` supplies the build command, the output directory and the rewrite
+that lets `/controller/analytics` be opened directly rather than only reached by
+clicking. Because Vite bakes that variable in at build time, changing it means
+redeploying, not just editing it.
+
+Then let the API accept the new origin, on the API host:
+
+```
+CORS_ORIGIN = https://your-project.vercel.app
+```
+
+Miss that step and the login page loads but every request fails — the symptom is
+a CORS error in the browser console, not a broken build. Preview deployments get
+their own URLs, so add any you want to use to the same list.
+
 ### Anywhere else
 
 `Dockerfile` builds the same single service, so Fly, Railway, a VPS or a
