@@ -1,0 +1,34 @@
+# Render blueprint — deploys SMART-ER as a single public web service.
+#
+# The built web application is served by the API process, so this is one
+# service on one port with one URL: no separate static site, no CORS to
+# configure, and the realtime channel shares the origin it was loaded from.
+#
+# Deploy: render.com -> New -> Blueprint -> pick this repository.
+services:
+  - type: web
+    name: smart-er
+    runtime: node
+    plan: free
+    # Closest region to India; change if you are demonstrating elsewhere.
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      # node:sqlite needs 22.5 or newer.
+      - key: NODE_VERSION
+        value: '22.18.0'
+      - key: NODE_ENV
+        value: production
+      # Generated once by Render and never shown in the repository. Sessions
+      # from before a regeneration stop being accepted, which is the safe
+      # default.
+      - key: JWT_SECRET
+        generateValue: true
+      # Asked for at deploy time rather than stored here. This is the password
+      # every seeded operator account gets, so it must not live in git.
+      - key: SEED_PASSWORD
+        sync: false
+      - key: SIM_AUTOSTART
+        value: 'true'
