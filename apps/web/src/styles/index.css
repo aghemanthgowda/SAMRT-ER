@@ -101,6 +101,18 @@
     height: 100%;
   }
 
+  /*
+   * Reserve the scrollbar's width whether or not one is showing.
+   *
+   * Without this, any change that makes the page taller than the viewport —
+   * an alert appearing, a panel expanding — summons a scrollbar, narrows the
+   * viewport by its width, and shifts every centred element sideways. The
+   * result reads as the whole window twitching on each interaction.
+   */
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
     margin: 0;
     background-color: var(--color-canvas);

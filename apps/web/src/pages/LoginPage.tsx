@@ -52,11 +52,20 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-full items-center justify-center bg-canvas p-4 lg:p-8">
-      <div className="grid w-full max-w-[1180px] overflow-hidden rounded-2xl border border-line bg-surface shadow-card lg:min-h-[660px] lg:grid-cols-2">
+      {/*
+        A fixed height on desktop rather than a minimum.
+        The card is vertically centred, so anything that changes its height —
+        the error alert, the sign-up note — moves the whole card and reads as
+        the page jumping. At a fixed height those render inside a column that
+        scrolls instead, and nothing outside it moves. The width is set so the
+        artwork panel's aspect ratio stays close to the artwork's own, which
+        is what keeps the crop off the branding.
+      */}
+      <div className="grid w-full max-w-[1320px] overflow-hidden rounded-2xl border border-line bg-surface shadow-card lg:h-[600px] lg:grid-cols-2">
         <HeroPanel />
 
         {/* Form */}
-        <div className="flex items-center justify-center px-6 py-10 sm:px-12 lg:px-14">
+        <div className="flex items-center justify-center overflow-y-auto px-6 py-10 sm:px-12 lg:px-14 lg:py-8">
           <div className="w-full max-w-[400px]">
             {/* Compact identity for narrow screens, where the hero is hidden. */}
             <div className="mb-8 flex items-center gap-3 lg:hidden">
@@ -175,25 +184,36 @@ export function LoginPage() {
               <ProviderButton provider="microsoft" />
             </div>
 
-            <p className="mt-7 text-center text-[14px] text-ink-600">
-              Don&rsquo;t have an account?{' '}
-              <button
-                type="button"
-                onClick={() => setShowSignUpNote((current) => !current)}
-                aria-expanded={showSignUpNote}
-                className="font-semibold text-brand-600 hover:underline"
-              >
-                Sign up
-              </button>
-            </p>
+            {/*
+              The explanation is a popover, not a block in the flow.
+              Expanding it inline would change the card's height, and the card
+              is centred — so the entire page would shift on a click. It opens
+              upward over the provider buttons instead, and nothing moves.
+            */}
+            <div className="relative mt-7">
+              {showSignUpNote && (
+                <p
+                  role="status"
+                  className="absolute inset-x-0 bottom-full z-10 mb-2 rounded-xl border border-line bg-surface px-4 py-3 text-center text-[13px] leading-relaxed text-ink-600 shadow-lg"
+                >
+                  SMART-ER accounts are issued by your organisation&rsquo;s administrator and linked to a verified
+                  vehicle. There is no self-service sign-up — emergency privileges cannot be granted by the person
+                  claiming them.
+                </p>
+              )}
 
-            {showSignUpNote && (
-              <p className="mt-2.5 rounded-xl border border-line bg-surface-muted px-4 py-3 text-center text-[13px] leading-relaxed text-ink-600">
-                SMART-ER accounts are issued by your organisation&rsquo;s administrator and linked to a verified
-                vehicle. There is no self-service sign-up — emergency privileges cannot be granted by the person
-                claiming them.
+              <p className="text-center text-[14px] text-ink-600">
+                Don&rsquo;t have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowSignUpNote((current) => !current)}
+                  aria-expanded={showSignUpNote}
+                  className="font-semibold text-brand-600 hover:underline"
+                >
+                  Sign up
+                </button>
               </p>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -220,7 +240,16 @@ function HeroPanel() {
           alt="An ambulance and a fire appliance running a green corridor through city traffic, with an air ambulance overhead"
           onLoad={() => setLoaded(true)}
           onError={() => setFailed(true)}
-          className={`absolute inset-0 size-full object-cover object-center transition-opacity duration-500 ${
+          /*
+           * Anchored left, not centred.
+           *
+           * The artwork is landscape and this panel is portrait, so `cover`
+           * has to discard some width. Centring splits that loss across both
+           * edges and takes the logo and wordmark with it — the left edge is
+           * exactly where the branding lives. Anchoring left spends the whole
+           * crop on the right, where the artwork is open sky and city.
+           */
+          className={`absolute inset-0 size-full object-cover object-left transition-opacity duration-500 ${
             loaded ? 'opacity-100' : 'opacity-0'
           }`}
         />
