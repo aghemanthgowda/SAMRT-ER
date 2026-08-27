@@ -105,3 +105,26 @@ export const config = {
 } as const;
 
 export type Config = typeof config;
+
+/**
+ * Whether a browser origin may call this server.
+ *
+ * The configured list is for a web app served from somewhere else — the Vite
+ * dev server on another port. Once the built app is served from this process
+ * the requests are same-origin, and the origin is whatever address the device
+ * used to reach us: `localhost` from this machine, a LAN IP from a phone, a
+ * tunnel hostname from anywhere. Enumerating those in CORS_ORIGIN is not
+ * possible, and not necessary: a request whose Origin host matches the Host it
+ * was sent to is by definition not cross-origin.
+ */
+export function isAllowedOrigin(origin: string | undefined, host: string | undefined): boolean {
+  // No Origin header: a same-origin navigation, curl, or a native client.
+  if (!origin) return true;
+  if (config.corsOrigins.includes(origin)) return true;
+
+  try {
+    return Boolean(host) && new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}

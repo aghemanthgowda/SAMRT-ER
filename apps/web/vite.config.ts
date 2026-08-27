@@ -33,7 +33,17 @@ export default defineConfig(({ mode }) => {
        * have worked. Better to stop and say the port is taken.
        */
       strictPort: true,
+      // 0.0.0.0, so a phone or tablet on the same network can reach it.
       host: true,
+      /*
+       * Vite allows localhost and bare IP addresses by default but rejects
+       * unknown host *names*, which is what a tunnel gives you. Naming the
+       * tunnel's domain here is what lets it through — e.g.
+       * ALLOWED_HOSTS=.trycloudflare.com
+       */
+      ...(env.ALLOWED_HOSTS
+        ? { allowedHosts: env.ALLOWED_HOSTS.split(',').map((entry) => entry.trim()).filter(Boolean) }
+        : {}),
       proxy: {
         '/api': { target: apiOrigin, changeOrigin: true },
         '/socket.io': { target: apiOrigin, ws: true, changeOrigin: true },

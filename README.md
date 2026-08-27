@@ -173,6 +173,59 @@ reservation over SMART-ER's own junction network.
 
 ---
 
+## Running it on more than one machine
+
+`localhost` only works on the machine running the server. To sign in from a
+phone, a tablet and a laptop at once — a driver on the handset, a controller on
+the laptop, a hospital desk on the tablet — build the app and serve it from the
+API process, so the whole system is one address on one port:
+
+```bash
+npm run build
+npm start
+```
+
+At boot the server prints the addresses other devices can open:
+
+```
+[smart-er] reachable on this network at http://192.168.1.24:4000
+```
+
+Open that on any device on the same Wi-Fi. There is no second port to expose
+and no CORS to configure: built, the web app is served by the same process that
+serves the API, so every request is same-origin.
+
+If a device cannot reach it, the firewall is the usual reason — Windows
+prompts on first run, and if it was dismissed, Node needs an inbound rule for
+private networks.
+
+### The driver's GPS needs HTTPS
+
+The driver screen reads the handset's own position with the Geolocation API,
+and browsers only expose that in a **secure context**: HTTPS, or `localhost`.
+Over a plain `http://192.168.x.x` address a phone will refuse it silently and
+the vehicle keeps its simulated position.
+
+For a real GPS demo, put a tunnel in front of the server. Any will do; this one
+needs no account:
+
+```bash
+cloudflared tunnel --url http://localhost:4000
+```
+
+It prints an `https://….trycloudflare.com` address that works from any network
+and satisfies the secure-context requirement. Everything else — realtime,
+Maps, sign-in — works over it unchanged.
+
+To tunnel the *dev* server instead of a build, name the tunnel's domain so Vite
+will answer to it, since it rejects unknown host names by default:
+
+```bash
+ALLOWED_HOSTS=.trycloudflare.com npm run dev
+```
+
+---
+
 ## Storage
 
 Operational state is held in SQLite at `data/smart-er.db`, created on first

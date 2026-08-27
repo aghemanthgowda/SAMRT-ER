@@ -3,7 +3,7 @@ import { Server, type Socket } from 'socket.io';
 import type { ClientToServerEvents, ServerToClientEvents, User } from '@smart-er/core';
 import { Role, VehicleStatus, isoNow } from '@smart-er/core';
 import { AuthError, userFromToken } from '../auth/auth.js';
-import { config } from '../config.js';
+import { isAllowedOrigin } from '../config.js';
 import type { AppContext } from '../services/context.js';
 
 interface SocketData {
@@ -24,7 +24,17 @@ export function attachRealtime(httpServer: HttpServer, context: AppContext): Ser
   const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(
     httpServer,
     {
-      cors: { origin: config.corsOrigins, credentials: true },
+      /*
+       * `allowRequest` is the gate; it sees the Host header and so can tell a
+       * same-origin handshake from a cross-origin one. `cors` then just
+       * reflects the origin of whatever got through. Without this the realtime
+       * channel refused the handshake for every device except localhost, and
+       * the dashboard silently stopped updating.
+       */
+      allowRequest: (req, callback) => {
+        callback(null, isAllowedOrigin(req.headers.origin, req.headers.host));
+      },
+      cors: { origin: true, credentials: true },
       // Long-poll fallback matters on mobile networks, which is where drivers are.
       transports: ['websocket', 'polling'],
       pingInterval: 20000,

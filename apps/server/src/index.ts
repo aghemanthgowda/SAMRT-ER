@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import os from 'node:os';
 import { config } from './config.js';
 import { createApp } from './app.js';
 import { Store } from './db/store.js';
@@ -18,6 +19,9 @@ async function main(): Promise<void> {
   }
 
   httpServer.listen(config.port, config.host, () => {
+    for (const address of lanAddresses()) {
+      console.info(`[smart-er] reachable on this network at http://${address}:${config.port}`);
+    }
     console.info(
       `[smart-er] API listening on http://${config.host}:${config.port} ` +
         `(${config.nodeEnv}, hardware: ${store.hardware.mode.toLowerCase()}, ` +
@@ -37,6 +41,21 @@ async function main(): Promise<void> {
 
   process.on('SIGINT', () => void shutdown('SIGINT'));
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
+}
+
+/**
+ * The addresses another device on the same network can open.
+ *
+ * Printed at boot because the alternative is hunting for the machine's IP with
+ * `ipconfig` — and `localhost` is the one address that is guaranteed not to
+ * work from a phone.
+ */
+function lanAddresses(): string[] {
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .filter((entry): entry is os.NetworkInterfaceInfo => Boolean(entry))
+    .filter((entry) => entry.family === 'IPv4' && !entry.internal)
+    .map((entry) => entry.address);
 }
 
 main().catch((error) => {
