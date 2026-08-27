@@ -2,11 +2,11 @@
   "name": "smart-er",
   "private": true,
   "version": "1.0.0",
-  "description": "SMART-ER — emergency traffic corridor management platform",
+  "description": "SMART-ER \u2014 emergency traffic corridor management platform",
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=20.10"
+    "node": ">=22.5.0"
   },
   "workspaces": [
     "packages/*",

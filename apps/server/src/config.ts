@@ -42,6 +42,18 @@ function resolveJwtSecret(): string {
   return crypto.randomBytes(48).toString('hex');
 }
 
+/**
+ * Defaults to `data/smart-er.db` beside the repository, so a plain
+ * `npm run dev` is durable without anything to configure. Set DATABASE_PATH to
+ * an empty string to opt back out.
+ */
+function resolveDatabasePath(): string {
+  if (isTest) return '';
+  const configured = process.env.DATABASE_PATH;
+  if (configured !== undefined) return configured.trim();
+  return path.resolve(here, '../../../data/smart-er.db');
+}
+
 export const config = {
   nodeEnv,
   isProduction,
@@ -73,6 +85,23 @@ export const config = {
 
   /** Server-side Google key, used only if server-side route enrichment is added. */
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY ?? '',
+
+  /**
+   * Where operational state is stored.
+   *
+   * A path means SQLite, and the system picks up where it left off. The empty
+   * string means memory only, which is what the tests want and what someone
+   * demonstrating from a clean slate every time wants. Tests default to memory
+   * regardless, so a stray DATABASE_PATH in the environment cannot make one
+   * test run visible to the next.
+   */
+  databasePath: resolveDatabasePath(),
+
+  /**
+   * Where the browser reaches this deployment. Used to build password-reset
+   * links, which have to point at the web app rather than at the API.
+   */
+  appBaseUrl: process.env.APP_BASE_URL?.trim() || 'http://localhost:5173',
 } as const;
 
 export type Config = typeof config;

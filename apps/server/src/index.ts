@@ -6,7 +6,7 @@ import { attachRealtime } from './realtime/socket.js';
 import { createContext } from './services/context.js';
 
 async function main(): Promise<void> {
-  const store = Store.create();
+  const store = Store.create({ databasePath: config.databasePath || undefined });
   const context = createContext(store);
   const app = createApp(context);
   const httpServer = createServer(app);
@@ -21,13 +21,15 @@ async function main(): Promise<void> {
     console.info(
       `[smart-er] API listening on http://${config.host}:${config.port} ` +
         `(${config.nodeEnv}, hardware: ${store.hardware.mode.toLowerCase()}, ` +
-        `${store.graph.junctions.length} junctions)`,
+        `${store.graph.junctions.length} junctions, ` +
+        `storage: ${config.databasePath ? `${config.databasePath}${store.seeded ? ' — seeded' : ''}` : 'in memory'})`,
     );
   });
 
   const shutdown = async (signal: string) => {
     console.info(`[smart-er] ${signal} received, shutting down.`);
     await context.shutdown();
+    store.close();
     httpServer.close(() => process.exit(0));
     // Do not let a hung connection prevent the process from exiting.
     setTimeout(() => process.exit(0), 5000).unref();

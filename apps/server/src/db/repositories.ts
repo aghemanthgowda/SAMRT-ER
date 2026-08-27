@@ -27,6 +27,19 @@ import type {
  * `store.ts`, not a change to any service.
  */
 
+/**
+ * Where a repository mirrors its writes so they survive a restart.
+ *
+ * The repositories keep answering reads from memory either way — the sink is
+ * told about mutations, it is never consulted about a lookup. That is what
+ * lets durability be added without changing the cost of the reads the
+ * simulation does on every tick.
+ */
+export interface PersistenceSink<T> {
+  put(id: string, entity: T): void;
+  remove(id: string): void;
+}
+
 export interface ReadRepository<T> {
   get(id: string): T | undefined;
   list(): T[];
@@ -64,8 +77,19 @@ export class MemoryRepository<T> implements WriteRepository<T> {
   constructor(
     private readonly idOf: (entity: T) => string,
     seed: readonly T[] = [],
+    private readonly sink?: PersistenceSink<T>,
   ) {
     this.putAll(seed);
+  }
+
+  /**
+   * Populate from storage without writing back.
+   *
+   * Used at boot to restore what a previous run left behind; going through
+   * `put` would re-persist every row that was just read.
+   */
+  hydrate(entities: readonly T[]): void {
+    for (const entity of entities) this.items.set(this.idOf(entity), entity);
   }
 
   get(id: string): T | undefined {
@@ -81,7 +105,9 @@ export class MemoryRepository<T> implements WriteRepository<T> {
   }
 
   put(entity: T): T {
-    this.items.set(this.idOf(entity), entity);
+    const id = this.idOf(entity);
+    this.items.set(id, entity);
+    this.sink?.put(id, entity);
     return entity;
   }
 
@@ -90,10 +116,13 @@ export class MemoryRepository<T> implements WriteRepository<T> {
   }
 
   remove(id: string): boolean {
-    return this.items.delete(id);
+    const existed = this.items.delete(id);
+    if (existed) this.sink?.remove(id);
+    return existed;
   }
 
   clear(): void {
+    for (const id of this.items.keys()) this.sink?.remove(id);
     this.items.clear();
   }
 
@@ -115,7 +144,22 @@ export class RingRepository<T> implements WriteRepository<T> {
   constructor(
     private readonly idOf: (entity: T) => string,
     private readonly capacity: number,
+    private readonly sink?: PersistenceSink<T>,
   ) {}
+
+  /**
+   * Populate from storage without writing back, oldest first.
+   *
+   * Insertion order is load-bearing here — `recent()` reads the tail and the
+   * cap drops the head — so the restored order has to match the order the
+   * entries were originally written in, not whatever the query returned.
+   */
+  hydrate(entities: readonly T[]): void {
+    for (const entity of entities) {
+      this.items.set(this.idOf(entity), entity);
+    }
+    this.trim();
+  }
 
   get(id: string): T | undefined {
     return this.items.get(id);
@@ -130,12 +174,10 @@ export class RingRepository<T> implements WriteRepository<T> {
   }
 
   put(entity: T): T {
-    this.items.set(this.idOf(entity), entity);
-    while (this.items.size > this.capacity) {
-      const oldest = this.items.keys().next();
-      if (oldest.done) break;
-      this.items.delete(oldest.value);
-    }
+    const id = this.idOf(entity);
+    this.items.set(id, entity);
+    this.sink?.put(id, entity);
+    this.trim();
     return entity;
   }
 
@@ -144,7 +186,19 @@ export class RingRepository<T> implements WriteRepository<T> {
   }
 
   remove(id: string): boolean {
-    return this.items.delete(id);
+    const existed = this.items.delete(id);
+    if (existed) this.sink?.remove(id);
+    return existed;
+  }
+
+  /** Drop oldest entries until the cap is respected, in storage as well. */
+  private trim(): void {
+    while (this.items.size > this.capacity) {
+      const oldest = this.items.keys().next();
+      if (oldest.done) break;
+      this.items.delete(oldest.value);
+      this.sink?.remove(oldest.value);
+    }
   }
 
   /** Most recent `count` entries, newest last. */

@@ -28,6 +28,11 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
-# runtime state
+# runtime state — the SQLite database holds operational history and password
+# hashes, so it must never be committed
+data/
+*.db
+*.db-shm
+*.db-wal
 apps/server/data/*.json
 !apps/server/data/.gitkeep
