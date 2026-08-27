@@ -251,8 +251,13 @@ function HeroPanel() {
             src={HERO_IMAGE}
             alt=""
             aria-hidden
-            className={`absolute inset-0 size-full scale-110 object-cover blur-2xl transition-opacity duration-500 ${
-              loaded ? 'opacity-70' : 'opacity-0'
+            /*
+             * Unscaled and top-anchored, so the fill's top row is the image's
+             * own top row. Zooming it in would show slightly different sky at
+             * the join and leave a visible step where the sharp image begins.
+             */
+            className={`absolute inset-0 size-full object-cover object-top blur-2xl transition-opacity duration-500 ${
+              loaded ? 'opacity-100' : 'opacity-0'
             }`}
           />
           <img
@@ -260,7 +265,17 @@ function HeroPanel() {
             alt="An ambulance and a fire appliance running a green corridor through city traffic, with an air ambulance overhead"
             onLoad={() => setLoaded(true)}
             onError={() => setFailed(true)}
-            className={`absolute inset-0 size-full object-contain object-center transition-opacity duration-500 ${
+            /*
+             * Anchored to the bottom, so the road runs to the panel's edge.
+             *
+             * Centred, the image leaves a band above *and* below it, and the
+             * lower one is the worse of the two: it is the blurred road, which
+             * is darker than the sharp road immediately above it, so the seam
+             * shows as a grey strip. Sitting the image on the bottom edge
+             * leaves a single band at the top, where the fill is defocused sky
+             * meeting the image's own sky — a join with nothing to give away.
+             */
+            className={`absolute inset-0 size-full object-contain object-bottom transition-opacity duration-500 ${
               loaded ? 'opacity-100' : 'opacity-0'
             }`}
           />
