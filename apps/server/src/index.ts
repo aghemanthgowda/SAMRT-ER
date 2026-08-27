@@ -18,6 +18,25 @@ async function main(): Promise<void> {
     context.simulation.start();
   }
 
+  /*
+   * A port already in use is the most common way this fails to start, and the
+   * usual cause is an earlier run that was never stopped. Node's default for
+   * that is an unhandled 'error' event and a stack trace, which says what
+   * happened but not what to do about it.
+   */
+  httpServer.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code !== 'EADDRINUSE') throw error;
+    console.error(
+      `\n[smart-er] Port ${config.port} is already in use.\n\n` +
+        '  Something is still listening there — almost always a server from an\n' +
+        '  earlier run. Stop it, then start again:\n\n' +
+        '      Windows      Get-Process node | Stop-Process -Force\n' +
+        '      macOS/Linux  pkill -f "node dist" ; pkill -f "tsx watch"\n\n' +
+        `  Or run on a different port:  PORT=${config.port + 100} npm start\n`,
+    );
+    process.exit(1);
+  });
+
   httpServer.listen(config.port, config.host, () => {
     for (const address of lanAddresses()) {
       console.info(`[smart-er] reachable on this network at http://${address}:${config.port}`);
