@@ -29,6 +29,18 @@ npm run dev
 
 Open <http://localhost:5173> and sign in.
 
+### On Windows
+
+`start.cmd` does the same thing without a terminal: double-click it. It moves
+to its own folder first, installs and builds if it needs to, and starts a
+scenario so the console opens with units already moving — then serves
+everything on <http://localhost:4000>.
+
+Running `npm` from the wrong directory is the usual first failure, and this
+avoids it: npm reads `package.json` from wherever the shell happens to be, so a
+window that opened in `C:\WINDOWS\system32` reports a missing `package.json`
+rather than anything about this project.
+
 ### Accounts
 
 Operator accounts live in the database, not in the interface. The sign-in
