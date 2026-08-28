@@ -32,3 +32,7 @@ services:
         sync: false
       - key: SIM_AUTOSTART
         value: 'true'
+      # Runs a scenario at boot so the link is live on arrival rather than
+      # showing an empty console to whoever opens it first.
+      - key: SIM_SCENARIO
+        value: multi-vehicle

@@ -110,6 +110,18 @@ confirmed position rather than guessing), **Junction controller unreachable**
 
 Run the simulation at 4× to see a complete run in about ninety seconds.
 
+Nothing runs until a scenario is started, so a freshly booted system is a
+working but empty dashboard. To skip the clicking — and on anything other people
+will open, where whoever arrives first would otherwise find it empty — name a
+scenario at boot instead:
+
+```bash
+SIM_SCENARIO=multi-vehicle npm start
+```
+
+`multi-vehicle` puts four units on the network at once and shows the most at a
+glance. An unrecognised name lists the valid ids and does not stop the server.
+
 ---
 
 ## Google Maps

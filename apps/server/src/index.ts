@@ -5,6 +5,7 @@ import { createApp } from './app.js';
 import { Store } from './db/store.js';
 import { attachRealtime } from './realtime/socket.js';
 import { createContext } from './services/context.js';
+import { scenarioSummaries } from './simulation/scenarios.js';
 
 async function main(): Promise<void> {
   const store = Store.create({ databasePath: config.databasePath || undefined });
@@ -16,6 +17,25 @@ async function main(): Promise<void> {
 
   if (config.simulation.autoStart) {
     context.simulation.start();
+  }
+
+  /*
+   * A named scenario makes a cold start arrive with units already moving. An
+   * unrecognised name is worth reporting rather than crashing on: the server
+   * is still useful without it, and the message says which names work.
+   */
+  if (config.simulation.scenario) {
+    try {
+      const state = await context.simulation.startScenario(config.simulation.scenario);
+      console.log(`[smart-er] scenario running: ${state.scenarioName ?? config.simulation.scenario}`);
+    } catch {
+      console.warn(
+        `[smart-er] SIM_SCENARIO="${config.simulation.scenario}" is not a scenario. Try one of:\n` +
+          scenarioSummaries()
+            .map((s) => `      ${s.id}`)
+            .join('\n'),
+      );
+    }
   }
 
   /*

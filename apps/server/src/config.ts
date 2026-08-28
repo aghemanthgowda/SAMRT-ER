@@ -74,6 +74,13 @@ export const config = {
     speed: float(process.env.SIM_SPEED, 1),
     /** Auto-start the idle traffic simulation so a fresh dashboard is not blank. */
     autoStart: process.env.SIM_AUTOSTART !== 'false',
+    /**
+     * Scenario to run at boot, by id. The clock alone produces no emergencies,
+     * so a deployment nobody signs into first shows an empty console — which
+     * is the wrong thing to hand a demonstration audience. Naming a scenario
+     * here makes every cold start arrive with units already moving.
+     */
+    scenario: process.env.SIM_SCENARIO?.trim() || undefined,
   },
 
   /**
